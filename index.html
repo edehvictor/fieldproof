@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="FieldProof verifies real-world stablecoin conditions through MiniPay users, AI evidence checks, Celo payouts, and onchain proof records."
+    />
+    <title>FieldProof | Verified stablecoin reality for AI agents</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <a class="brand" href="#overview" aria-label="FieldProof home">
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 256 256" role="img">
+              <path
+                d="M 0 192 C 0 227.346 28.654 256 64 256 L 256 256 L 256 64 C 256 28.654 227.346 0 192 0 L 0 0 Z M 178 128 C 150.386 128 128 150.386 128 178 L 128 192 L 64 192 L 64 128 L 78 128 C 105.614 128 128 105.614 128 78 L 128 64 L 192 64 L 192 128 Z"
+              ></path>
+            </svg>
+          </span>
+          <span>
+            <strong>FieldProof</strong>
+            <small>Verified stablecoin reality for AI agents</small>
+          </span>
+        </a>
+
+        <nav class="nav-tabs" aria-label="Product sections">
+          <button class="nav-tab is-active" data-view="overview" type="button">Index</button>
+          <button class="nav-tab" data-view="requester" type="button">Agent</button>
+          <button class="nav-tab" data-view="contributor" type="button">MiniPay</button>
+          <button class="nav-tab" data-view="registry" type="button">Registry</button>
+        </nav>
+
+        <div class="network-pill" title="Demo network state">
+          <span class="pulse"></span>
+          Celo Mainnet Ready
+        </div>
+      </header>
+
+      <div class="ticker-rail" aria-label="Live stablecoin reality ticker">
+        <span>LAGOS_USDT_CASHOUT 3.8% +0.4</span>
+        <span>ACCRA_MINIPAY_ACCEPTANCE 58% +7</span>
+        <span>NAIROBI_CUSD_SPREAD 2.1% -0.3</span>
+        <span>ABUJA_CASHOUT 3.4% REVIEW</span>
+        <span>FIELDPROOF_INDEX LIVE</span>
+      </div>
+
+      <main>
+        <section class="hero-grid" id="overview">
+          <aside class="control-panel" aria-label="FieldProof system state">
+            <div class="panel-block">
+              <p class="eyebrow">Live mission</p>
+              <h1>Stablecoin Reality Index</h1>
+              <p class="subcopy">
+                AI agents request local stablecoin facts. MiniPay users submit evidence. FieldProof verifies and pays on Celo.
+              </p>
+            </div>
+
+            <div class="metric-stack" aria-label="Index metrics">
+              <article class="metric">
+                <span>Avg cash-out fee</span>
+                <strong id="avgFee">3.1%</strong>
+                <small>across active city proofs</small>
+              </article>
+              <article class="metric">
+                <span>Proof confidence</span>
+                <strong id="avgConfidence">88%</strong>
+                <small>AI + consensus score</small>
+              </article>
+              <article class="metric">
+                <span>Celo payouts</span>
+                <strong id="totalPayouts">18.40 cUSD</strong>
+                <small>released to contributors</small>
+              </article>
+            </div>
+
+            <div class="proof-punchline">
+              <strong>Every local claim becomes a paid proof.</strong>
+              <span>Every verified proof updates the index.</span>
+            </div>
+          </aside>
+
+          <section class="main-stage" aria-label="Stablecoin reality workspace">
+            <div class="stage-header">
+              <div>
+                <p class="eyebrow">Agent-readable output</p>
+                <h2>What does using stablecoins cost on the ground?</h2>
+              </div>
+              <button class="primary-action" type="button" data-jump="requester">Create Request</button>
+            </div>
+
+            <div class="map-board" aria-label="Verified city signals">
+              <div class="map-grid">
+                <button class="city-node node-lagos is-hot" type="button" data-city="Lagos">
+                  <span>Lagos</span>
+                  <strong>3.8%</strong>
+                </button>
+                <button class="city-node node-accra" type="button" data-city="Accra">
+                  <span>Accra</span>
+                  <strong>2.9%</strong>
+                </button>
+                <button class="city-node node-nairobi" type="button" data-city="Nairobi">
+                  <span>Nairobi</span>
+                  <strong>2.1%</strong>
+                </button>
+                <button class="city-node node-abuja" type="button" data-city="Abuja">
+                  <span>Abuja</span>
+                  <strong>3.4%</strong>
+                </button>
+                <div class="route route-a"></div>
+                <div class="route route-b"></div>
+                <div class="route route-c"></div>
+              </div>
+              <aside class="city-detail" id="cityDetail">
+                <p class="eyebrow">Selected city</p>
+                <h3>Lagos</h3>
+                <dl>
+                  <div>
+                    <dt>Cash-out fee</dt>
+                    <dd>3.8%</dd>
+                  </div>
+                  <div>
+                    <dt>Merchant acceptance</dt>
+                    <dd>64%</dd>
+                  </div>
+                  <div>
+                    <dt>Latest proof</dt>
+                    <dd>4 min ago</dd>
+                  </div>
+                </dl>
+              </aside>
+            </div>
+
+            <section class="chart-panel" aria-label="Stablecoin reality trend">
+              <div class="chart-copy">
+                <p class="eyebrow">30D index movement</p>
+                <h3>Verified cash-out fees are pricing in real time</h3>
+              </div>
+              <div class="chart-frame">
+                <svg id="realityChart" viewBox="0 0 760 220" preserveAspectRatio="none"></svg>
+              </div>
+            </section>
+
+            <div class="index-table-wrap">
+              <table class="index-table">
+                <thead>
+                  <tr>
+                    <th>City</th>
+                    <th>Signal</th>
+                    <th>Verified value</th>
+                    <th>Confidence</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="indexRows"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section class="view-section is-visible" data-panel="requester">
+          <div class="section-heading">
+            <p class="eyebrow">Requester / agent console</p>
+            <h2>Turn a market question into a funded proof request</h2>
+          </div>
+
+          <div class="workspace-grid">
+            <form class="request-card" id="requestForm">
+              <label>
+                Agent question
+                <textarea
+                  id="agentQuestion"
+                  rows="4"
+                  spellcheck="true"
+                >What is the real fee to cash out 20 USDT in Lagos today?</textarea>
+              </label>
+
+              <div class="form-grid">
+                <label>
+                  Proof type
+                  <select id="proofType">
+                    <option value="cashout_fee">Cash-out fee</option>
+                    <option value="merchant_acceptance">MiniPay merchant acceptance</option>
+                    <option value="fx_spread">Stablecoin-to-cash spread</option>
+                    <option value="local_price">Local price benchmark</option>
+                  </select>
+                </label>
+                <label>
+                  City
+                  <select id="city">
+                    <option>Lagos</option>
+                    <option>Abuja</option>
+                    <option>Accra</option>
+                    <option>Nairobi</option>
+                  </select>
+                </label>
+                <label>
+                  Reward per proof
+                  <input id="reward" type="number" min="0.1" step="0.1" value="0.8" />
+                </label>
+                <label>
+                  Confirmations
+                  <input id="confirmations" type="number" min="1" max="10" value="3" />
+                </label>
+              </div>
+
+              <div class="form-actions">
+                <button class="primary-action" type="submit">Fund Request</button>
+                <span class="tx-note">Escrow simulated in cUSD for demo build</span>
+              </div>
+            </form>
+
+            <aside class="agent-preview">
+              <p class="eyebrow">Structured agent payload</p>
+              <pre id="agentPayload"></pre>
+            </aside>
+          </div>
+        </section>
+
+        <section class="view-section" data-panel="contributor">
+          <div class="section-heading">
+            <p class="eyebrow">MiniPay contributor flow</p>
+            <h2>Submit street-level evidence and receive Celo payouts</h2>
+          </div>
+
+          <div class="mobile-workbench">
+            <div class="phone-frame" aria-label="MiniPay task feed">
+              <div class="phone-top">
+                <span>MiniPay</span>
+                <strong>0x7a...91f2</strong>
+              </div>
+              <div class="task-feed" id="taskFeed"></div>
+            </div>
+
+            <form class="submission-card" id="submissionForm">
+              <p class="eyebrow">Evidence submission</p>
+              <label>
+                Select request
+                <select id="submissionRequest"></select>
+              </label>
+              <div class="form-grid">
+                <label>
+                  Reported value
+                  <input id="reportedValue" value="3.8% fee on 20 USDT" />
+                </label>
+                <label>
+                  Evidence type
+                  <select id="evidenceType">
+                    <option>Receipt photo</option>
+                    <option>Merchant photo</option>
+                    <option>Payment screenshot</option>
+                    <option>Price board photo</option>
+                  </select>
+                </label>
+              </div>
+              <label>
+                Local note
+                <textarea id="localNote" rows="3">Agent quoted 800 NGN fee to cash out 20 USDT. MiniPay accepted for payment confirmation.</textarea>
+              </label>
+              <button class="primary-action" type="submit">Submit Proof</button>
+            </form>
+
+            <aside class="verifier-card">
+              <p class="eyebrow">AI verifier</p>
+              <h3 id="verifierTitle">Waiting for evidence</h3>
+              <div class="score-ring" id="scoreRing">--</div>
+              <ul class="check-list" id="verifierChecks"></ul>
+            </aside>
+          </div>
+        </section>
+
+        <section class="view-section" data-panel="registry">
+          <div class="section-heading">
+            <p class="eyebrow">Onchain proof registry</p>
+            <h2>Accepted proofs become queryable records</h2>
+          </div>
+
+          <div class="registry-layout">
+            <div class="contract-card">
+              <p class="eyebrow">Celo contracts</p>
+              <h3>FieldProofEscrow + FieldProofRegistry</h3>
+              <div class="contract-events">
+                <span>ProofRequestCreated</span>
+                <span>ProofSubmitted</span>
+                <span>ProofVerified</span>
+                <span>PayoutReleased</span>
+              </div>
+            </div>
+
+            <div class="proof-records" id="proofRecords"></div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="./app.js" type="module"></script>
+  </body>
+</html>

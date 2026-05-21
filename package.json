@@ -1,0 +1,20 @@
+{
+  "name": "fieldproof",
+  "version": "1.0.0",
+  "description": "Verified stablecoin reality for AI agents, powered by MiniPay users and Celo.",
+  "main": "index.html",
+  "scripts": {
+    "start": "python -m http.server 4173",
+    "check": "node scripts/check-static.mjs"
+  },
+  "keywords": [
+    "celo",
+    "minipay",
+    "ai-agents",
+    "stablecoins",
+    "oracle"
+  ],
+  "author": "",
+  "license": "MIT",
+  "type": "module"
+}

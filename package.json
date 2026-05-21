@@ -4,8 +4,10 @@
   "description": "Verified stablecoin reality for AI agents, powered by MiniPay users and Celo.",
   "main": "index.html",
   "scripts": {
-    "start": "python -m http.server 4173",
-    "check": "node scripts/check-static.mjs"
+    "start": "node server/index.mjs",
+    "check": "node scripts/check-static.mjs",
+    "compile:contracts": "node scripts/compile-contracts.mjs",
+    "deploy:celo": "node scripts/deploy-celo.mjs"
   },
   "keywords": [
     "celo",
@@ -16,5 +18,10 @@
   ],
   "author": "",
   "license": "MIT",
-  "type": "module"
+  "type": "module",
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "solc": "^0.8.35",
+    "viem": "^2.50.4"
+  }
 }

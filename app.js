@@ -1,4 +1,4 @@
-const state = {
+let state = {
   requests: [
     {
       id: "fp-req-1042",
@@ -145,7 +145,83 @@ const els = {
   totalPayouts: document.querySelector("#totalPayouts"),
   cityDetail: document.querySelector("#cityDetail"),
   realityChart: document.querySelector("#realityChart"),
+  walletStatus: document.querySelector("#walletStatus"),
 };
+
+const celoMainnet = {
+  chainId: "0xa4ec",
+  chainName: "Celo Mainnet",
+  nativeCurrency: {
+    name: "CELO",
+    symbol: "CELO",
+    decimals: 18,
+  },
+  rpcUrls: ["https://forno.celo.org"],
+  blockExplorerUrls: ["https://celoscan.io"],
+};
+
+async function apiRequest(path, options = {}) {
+  const response = await fetch(path, {
+    headers: {
+      "content-type": "application/json",
+      ...(options.headers || {}),
+    },
+    ...options,
+  });
+  if (!response.ok) {
+    throw new Error(`API request failed: ${response.status}`);
+  }
+  return response.json();
+}
+
+async function loadRemoteState() {
+  try {
+    state = await apiRequest("/api/state");
+  } catch (error) {
+    console.warn("Using local demo state because API is unavailable.", error);
+  }
+}
+
+function setWalletStatus(text) {
+  if (els.walletStatus) {
+    els.walletStatus.textContent = text;
+  }
+}
+
+async function initMiniPayWallet() {
+  const provider = window.ethereum;
+  if (!provider) {
+    setWalletStatus("MiniPay demo mode");
+    return;
+  }
+
+  try {
+    const chainId = await provider.request({ method: "eth_chainId" });
+    if (chainId !== celoMainnet.chainId) {
+      try {
+        await provider.request({
+          method: "wallet_switchEthereumChain",
+          params: [{ chainId: celoMainnet.chainId }],
+        });
+      } catch (switchError) {
+        if (switchError.code === 4902) {
+          await provider.request({
+            method: "wallet_addEthereumChain",
+            params: [celoMainnet],
+          });
+        } else {
+          throw switchError;
+        }
+      }
+    }
+    const accounts = await provider.request({ method: "eth_requestAccounts" });
+    const account = accounts?.[0];
+    setWalletStatus(account ? `MiniPay ${account.slice(0, 6)}...${account.slice(-4)}` : "MiniPay ready");
+  } catch (error) {
+    setWalletStatus("MiniPay permission needed");
+    console.warn("MiniPay/Celo wallet connection was not completed.", error);
+  }
+}
 
 function formatPayload() {
   const payload = {
@@ -355,37 +431,85 @@ function setPanel(view) {
   });
 }
 
-function createRequest(event) {
+async function createRequest(event) {
   event.preventDefault();
   const reward = Number(els.reward.value);
   const confirmations = Number(els.confirmations.value);
-  const request = {
-    id: `fp-req-${Math.floor(2000 + Math.random() * 8000)}`,
+  const payload = {
     question: els.agentQuestion.value.trim(),
-    type: els.proofType.value,
+    proofType: els.proofType.value,
     city: els.city.value,
     reward,
     confirmations,
-    funded: reward * confirmations,
-    status: "collecting",
-    created: "now",
   };
 
-  state.requests.unshift(request);
+  try {
+    const result = await apiRequest("/api/requests", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    state = result.state;
+  } catch (error) {
+    const request = {
+      id: `fp-req-${Math.floor(2000 + Math.random() * 8000)}`,
+      question: payload.question,
+      type: payload.proofType,
+      city: payload.city,
+      reward,
+      confirmations,
+      funded: reward * confirmations,
+      status: "collecting",
+      created: "now",
+      chain: "celo",
+      asset: "cUSD",
+    };
+    state.requests.unshift(request);
+    console.warn("Created proof request locally because API is unavailable.", error);
+  }
+
   renderTasks();
   setPanel("contributor");
 }
 
-function submitEvidence(event) {
+async function submitEvidence(event) {
   event.preventDefault();
   const request = state.requests.find((item) => item.id === els.submissionRequest.value);
   const reportedValue = document.querySelector("#reportedValue").value.trim();
   const note = document.querySelector("#localNote").value.trim();
-  const confidence = Math.min(
-    96,
-    82 + Math.round(Math.random() * 8) + (reportedValue.includes("%") ? 4 : 0),
-  );
-  const accepted = confidence >= 86;
+  const evidenceType = document.querySelector("#evidenceType").value;
+  let confidence;
+  let accepted;
+  let checks;
+
+  try {
+    const result = await apiRequest("/api/submissions", {
+      method: "POST",
+      body: JSON.stringify({
+        requestId: request.id,
+        reportedValue,
+        evidenceType,
+        localNote: note,
+      }),
+    });
+    state = result.state;
+    confidence = result.submission.verification.confidence;
+    accepted = result.submission.verification.accepted;
+    checks = result.submission.verification.checks.map((check) => [check.label, check.detail]);
+  } catch (error) {
+    confidence = Math.min(
+      96,
+      82 + Math.round(Math.random() * 8) + (reportedValue.includes("%") ? 4 : 0),
+    );
+    accepted = confidence >= 86;
+    checks = [
+      ["Evidence relevance", "Receipt/photo matches request type"],
+      ["Location window", `${request.city} geofence accepted`],
+      ["Duplicate check", "Evidence hash is unique"],
+      ["Value extraction", reportedValue],
+      ["Verifier note", note],
+    ];
+    console.warn("Verified proof locally because API is unavailable.", error);
+  }
 
   els.verifierTitle.textContent = accepted ? "Proof accepted" : "Manual review needed";
   els.scoreRing.textContent = `${confidence}%`;
@@ -393,17 +517,11 @@ function submitEvidence(event) {
     radial-gradient(circle at center, #111411 58%, transparent 60%),
     conic-gradient(${accepted ? "var(--green)" : "var(--gold)"} ${confidence * 3.6}deg, #2a302b 0deg)
   `;
-  els.verifierChecks.innerHTML = [
-    ["Evidence relevance", "Receipt/photo matches request type"],
-    ["Location window", `${request.city} geofence accepted`],
-    ["Duplicate check", "Evidence hash is unique"],
-    ["Value extraction", reportedValue],
-    ["Verifier note", note],
-  ]
+  els.verifierChecks.innerHTML = checks
     .map(([label, value]) => `<li><strong>${label}:</strong> ${value}</li>`)
     .join("");
 
-  if (accepted) {
+  if (accepted && !state.records.some((record) => record.result.includes(reportedValue))) {
     const proofRecord = {
       id: `proof-${Math.random().toString(16).slice(2, 7)}`,
       title: `${request.city} ${typeLabels[request.type]} verified`,
@@ -431,6 +549,10 @@ function submitEvidence(event) {
     renderIndex();
     renderRecords();
   }
+
+  renderIndex();
+  renderTasks();
+  renderRecords();
 }
 
 function updateCityDetail(city) {
@@ -472,8 +594,14 @@ document
 els.requestForm.addEventListener("submit", createRequest);
 els.submissionForm.addEventListener("submit", submitEvidence);
 
-formatPayload();
-renderIndex();
-renderTrendChart();
-renderTasks();
-renderRecords();
+async function boot() {
+  await loadRemoteState();
+  await initMiniPayWallet();
+  formatPayload();
+  renderIndex();
+  renderTrendChart();
+  renderTasks();
+  renderRecords();
+}
+
+boot();

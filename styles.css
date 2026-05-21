@@ -150,8 +150,14 @@ button {
   box-shadow: 0 0 22px rgba(255, 196, 0, 0.18);
 }
 
-.network-pill {
+.network-stack {
   justify-self: end;
+  display: grid;
+  gap: 6px;
+}
+
+.network-pill,
+.wallet-pill {
   display: inline-flex;
   gap: 8px;
   align-items: center;
@@ -165,6 +171,14 @@ button {
   font-size: 0.86rem;
   font-family: "DM Mono", ui-monospace, monospace;
   text-transform: uppercase;
+}
+
+.wallet-pill {
+  min-height: 28px;
+  border-color: rgba(255, 196, 0, 0.18);
+  background: rgba(255, 196, 0, 0.08);
+  color: var(--gold);
+  font-size: 0.7rem;
 }
 
 .pulse {
@@ -884,7 +898,7 @@ pre {
     grid-template-columns: 1fr;
   }
 
-  .network-pill {
+  .network-stack {
     justify-self: start;
   }
 
@@ -912,7 +926,7 @@ pre {
   }
 
   .brand small,
-  .network-pill {
+  .network-stack {
     display: none;
   }
 

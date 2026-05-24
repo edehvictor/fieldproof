@@ -61,10 +61,11 @@ POST /api/reset
 ```txt
 index.html                 Product app
 styles.css                 Responsive interface styling
-app.js                     Demo state and proof workflow
+app.ts                     Typed frontend proof workflow
+app.js                     Generated browser bundle after `npm run build`
 contracts/FieldProofEscrow.sol
 contracts/FieldProofRegistry.sol
-server/index.mjs
+server/index.ts
 data/seed.json
 docs/architecture.md
 ```

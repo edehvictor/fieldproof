@@ -1,6 +1,7 @@
 node_modules/
 .env
 .env.*
+!.env.example
 dist/
 build/
 .next/
@@ -11,3 +12,6 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 data/state.json
+/app.js
+/server/*.js
+/scripts/*.js

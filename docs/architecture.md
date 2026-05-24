@@ -29,7 +29,7 @@ Raw media should live in object storage. Onchain storage keeps hashes and concis
 
 ## Backend API
 
-The MVP uses `server/index.mjs` as a zero-framework Node API:
+The MVP uses `server/index.ts` as a zero-framework Node API:
 
 - `GET /api/state`: returns requests, submissions, proof records, and index values.
 - `POST /api/requests`: creates a Celo-funded proof request object.

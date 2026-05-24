@@ -42,7 +42,7 @@ if (!privateKey || !privateKey.startsWith("0x")) {
   throw new Error("Set PRIVATE_KEY in .env before deploying to Celo.");
 }
 
-const account = privateKeyToAccount(privateKey);
+const account = privateKeyToAccount(privateKey as `0x${string}`);
 const transport = http(rpcUrl);
 const wallet = createWalletClient({ account, chain, transport });
 const publicClient = createPublicClient({ chain, transport });
@@ -53,11 +53,12 @@ async function loadArtifact(name) {
 
 async function deploy(name, args) {
   const artifact = await loadArtifact(name);
-  const hash = await wallet.deployContract({
+  const hash = (await (wallet as any).deployContract({
+    chain,
     abi: artifact.abi,
     bytecode: artifact.bytecode,
     args,
-  });
+  })) as `0x${string}`;
   console.log(`${name} deploy tx: ${hash}`);
   const receipt = await publicClient.waitForTransactionReceipt({ hash });
   console.log(`${name} deployed at ${receipt.contractAddress}`);

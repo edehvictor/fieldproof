@@ -1,4 +1,106 @@
-let state = {
+export {};
+
+type ProofType = "cashout_fee" | "merchant_acceptance" | "fx_spread" | "local_price";
+type ProofStatus = "collecting" | "verified" | "review" | "rejected";
+type IndexStatus = "verified" | "review" | "rejected";
+type TrendKey = "lagos" | "accra" | "nairobi";
+
+interface ProofRequest {
+  id: string;
+  question: string;
+  type: ProofType | string;
+  city: string;
+  reward: number;
+  confirmations: number;
+  funded: number;
+  status: ProofStatus | string;
+  created: string;
+  chain?: "celo";
+  asset?: string;
+  escrowTx?: string;
+}
+
+interface IndexRow {
+  city: string;
+  signal: string;
+  value: string;
+  confidence: number;
+  status: IndexStatus;
+}
+
+interface ProofRecord {
+  id: string;
+  title: string;
+  result: string;
+  confidence: number;
+  payout: string;
+  tx: string;
+  chain?: "celo";
+  recordTx?: string;
+  evidenceHash?: string;
+}
+
+interface Submission {
+  id: string;
+  requestId: string;
+}
+
+interface TrendRow {
+  day: string;
+  lagos: number;
+  accra: number;
+  nairobi: number;
+}
+
+interface FieldProofState {
+  requests: ProofRequest[];
+  index: IndexRow[];
+  records: ProofRecord[];
+  submissions?: Submission[];
+  trend: TrendRow[];
+}
+
+interface EthereumProvider {
+  request<T = unknown>(args: { method: string; params?: unknown[] }): Promise<T>;
+}
+
+interface CreateRequestResponse {
+  request: ProofRequest;
+  state: FieldProofState;
+}
+
+interface VerificationCheck {
+  label: string;
+  detail: string;
+}
+
+interface SubmissionResponse {
+  submission: Submission & {
+    verification: {
+      accepted: boolean;
+      confidence: number;
+      checks: VerificationCheck[];
+    };
+  };
+  record?: ProofRecord;
+  state: FieldProofState;
+}
+
+declare global {
+  interface Window {
+    ethereum?: EthereumProvider;
+  }
+}
+
+function mustQuery<T extends Element>(selector: string): T {
+  const element = document.querySelector<T>(selector);
+  if (!element) {
+    throw new Error(`Missing required DOM element: ${selector}`);
+  }
+  return element;
+}
+
+let state: FieldProofState = {
   requests: [
     {
       id: "fp-req-1042",
@@ -92,14 +194,14 @@ let state = {
   ],
 };
 
-const typeLabels = {
+const typeLabels: Record<string, string> = {
   cashout_fee: "Cash-out fee",
   merchant_acceptance: "Merchant acceptance",
   fx_spread: "Stablecoin-to-cash spread",
   local_price: "Local price benchmark",
 };
 
-const citySignals = {
+const citySignals: Record<string, { fee: string; acceptance: string; latest: string }> = {
   Lagos: {
     fee: "3.8%",
     acceptance: "64%",
@@ -123,29 +225,29 @@ const citySignals = {
 };
 
 const els = {
-  tabs: [...document.querySelectorAll(".nav-tab")],
-  panels: [...document.querySelectorAll(".view-section")],
-  requestForm: document.querySelector("#requestForm"),
-  agentPayload: document.querySelector("#agentPayload"),
-  agentQuestion: document.querySelector("#agentQuestion"),
-  proofType: document.querySelector("#proofType"),
-  city: document.querySelector("#city"),
-  reward: document.querySelector("#reward"),
-  confirmations: document.querySelector("#confirmations"),
-  indexRows: document.querySelector("#indexRows"),
-  taskFeed: document.querySelector("#taskFeed"),
-  submissionRequest: document.querySelector("#submissionRequest"),
-  submissionForm: document.querySelector("#submissionForm"),
-  verifierTitle: document.querySelector("#verifierTitle"),
-  verifierChecks: document.querySelector("#verifierChecks"),
-  scoreRing: document.querySelector("#scoreRing"),
-  proofRecords: document.querySelector("#proofRecords"),
-  avgFee: document.querySelector("#avgFee"),
-  avgConfidence: document.querySelector("#avgConfidence"),
-  totalPayouts: document.querySelector("#totalPayouts"),
-  cityDetail: document.querySelector("#cityDetail"),
-  realityChart: document.querySelector("#realityChart"),
-  walletStatus: document.querySelector("#walletStatus"),
+  tabs: [...document.querySelectorAll<HTMLButtonElement>(".nav-tab")],
+  panels: [...document.querySelectorAll<HTMLElement>(".view-section")],
+  requestForm: mustQuery<HTMLFormElement>("#requestForm"),
+  agentPayload: mustQuery<HTMLPreElement>("#agentPayload"),
+  agentQuestion: mustQuery<HTMLTextAreaElement>("#agentQuestion"),
+  proofType: mustQuery<HTMLSelectElement>("#proofType"),
+  city: mustQuery<HTMLSelectElement>("#city"),
+  reward: mustQuery<HTMLInputElement>("#reward"),
+  confirmations: mustQuery<HTMLInputElement>("#confirmations"),
+  indexRows: mustQuery<HTMLTableSectionElement>("#indexRows"),
+  taskFeed: mustQuery<HTMLElement>("#taskFeed"),
+  submissionRequest: mustQuery<HTMLSelectElement>("#submissionRequest"),
+  submissionForm: mustQuery<HTMLFormElement>("#submissionForm"),
+  verifierTitle: mustQuery<HTMLElement>("#verifierTitle"),
+  verifierChecks: mustQuery<HTMLUListElement>("#verifierChecks"),
+  scoreRing: mustQuery<HTMLElement>("#scoreRing"),
+  proofRecords: mustQuery<HTMLElement>("#proofRecords"),
+  avgFee: mustQuery<HTMLElement>("#avgFee"),
+  avgConfidence: mustQuery<HTMLElement>("#avgConfidence"),
+  totalPayouts: mustQuery<HTMLElement>("#totalPayouts"),
+  cityDetail: mustQuery<HTMLElement>("#cityDetail"),
+  realityChart: mustQuery<SVGSVGElement>("#realityChart"),
+  walletStatus: mustQuery<HTMLElement>("#walletStatus"),
 };
 
 const celoMainnet = {
@@ -160,29 +262,29 @@ const celoMainnet = {
   blockExplorerUrls: ["https://celoscan.io"],
 };
 
-async function apiRequest(path, options = {}) {
+async function apiRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(path, {
     headers: {
       "content-type": "application/json",
-      ...(options.headers || {}),
+      ...(options.headers as Record<string, string> | undefined),
     },
     ...options,
   });
   if (!response.ok) {
     throw new Error(`API request failed: ${response.status}`);
   }
-  return response.json();
+  return response.json() as Promise<T>;
 }
 
 async function loadRemoteState() {
   try {
-    state = await apiRequest("/api/state");
+    state = await apiRequest<FieldProofState>("/api/state");
   } catch (error) {
     console.warn("Using local demo state because API is unavailable.", error);
   }
 }
 
-function setWalletStatus(text) {
+function setWalletStatus(text: string) {
   if (els.walletStatus) {
     els.walletStatus.textContent = text;
   }
@@ -204,7 +306,12 @@ async function initMiniPayWallet() {
           params: [{ chainId: celoMainnet.chainId }],
         });
       } catch (switchError) {
-        if (switchError.code === 4902) {
+        if (
+          typeof switchError === "object" &&
+          switchError !== null &&
+          "code" in switchError &&
+          switchError.code === 4902
+        ) {
           await provider.request({
             method: "wallet_addEthereumChain",
             params: [celoMainnet],
@@ -214,7 +321,7 @@ async function initMiniPayWallet() {
         }
       }
     }
-    const accounts = await provider.request({ method: "eth_requestAccounts" });
+    const accounts = await provider.request<string[]>({ method: "eth_requestAccounts" });
     const account = accounts?.[0];
     setWalletStatus(account ? `MiniPay ${account.slice(0, 6)}...${account.slice(-4)}` : "MiniPay ready");
   } catch (error) {
@@ -444,7 +551,7 @@ async function createRequest(event) {
   };
 
   try {
-    const result = await apiRequest("/api/requests", {
+    const result = await apiRequest<CreateRequestResponse>("/api/requests", {
       method: "POST",
       body: JSON.stringify(payload),
     });
@@ -460,7 +567,7 @@ async function createRequest(event) {
       funded: reward * confirmations,
       status: "collecting",
       created: "now",
-      chain: "celo",
+      chain: "celo" as const,
       asset: "cUSD",
     };
     state.requests.unshift(request);
@@ -474,15 +581,15 @@ async function createRequest(event) {
 async function submitEvidence(event) {
   event.preventDefault();
   const request = state.requests.find((item) => item.id === els.submissionRequest.value);
-  const reportedValue = document.querySelector("#reportedValue").value.trim();
-  const note = document.querySelector("#localNote").value.trim();
-  const evidenceType = document.querySelector("#evidenceType").value;
+  const reportedValue = mustQuery<HTMLInputElement>("#reportedValue").value.trim();
+  const note = mustQuery<HTMLTextAreaElement>("#localNote").value.trim();
+  const evidenceType = mustQuery<HTMLSelectElement>("#evidenceType").value;
   let confidence;
   let accepted;
   let checks;
 
   try {
-    const result = await apiRequest("/api/submissions", {
+    const result = await apiRequest<SubmissionResponse>("/api/submissions", {
       method: "POST",
       body: JSON.stringify({
         requestId: request.id,
@@ -579,10 +686,10 @@ function updateCityDetail(city) {
 
 els.tabs.forEach((tab) => tab.addEventListener("click", () => setPanel(tab.dataset.view)));
 document
-  .querySelectorAll("[data-jump]")
+  .querySelectorAll<HTMLButtonElement>("[data-jump]")
   .forEach((button) => button.addEventListener("click", () => setPanel(button.dataset.jump)));
 document
-  .querySelectorAll("[data-city]")
+  .querySelectorAll<HTMLButtonElement>("[data-city]")
   .forEach((button) => button.addEventListener("click", () => updateCityDetail(button.dataset.city)));
 
 ["input", "change"].forEach((eventName) => {

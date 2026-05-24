@@ -34,20 +34,21 @@ The MVP uses `server/index.ts` as a zero-framework Node API:
 - `GET /api/state`: returns requests, submissions, proof records, and index values.
 - `POST /api/requests`: creates a Celo-funded proof request object.
 - `POST /api/submissions`: runs verifier rules, records submission metadata, and updates the index on accepted proof.
-- `GET /api/config`: returns Celo mainnet and Alfajores chain config for MiniPay/EIP-1193 clients.
+- `GET /api/config`: returns Celo Sepolia and mainnet chain config for MiniPay/EIP-1193 clients.
 
 The local state lives in `data/state.json`, copied from `data/seed.json` when missing.
 
 ## MiniPay / Celo Client
 
-The frontend auto-detects `window.ethereum`, switches/adds Celo Mainnet when possible, and shows a MiniPay wallet status in the header. Local desktop browsers fall back to demo mode; MiniPay should use the injected EIP-1193 provider.
+The frontend auto-detects `window.ethereum`, switches/adds Celo Sepolia for hackathon testing, and shows a MiniPay wallet status in the header. Local desktop browsers fall back to demo mode; MiniPay should use the injected EIP-1193 provider.
 
 Supported Celo defaults:
 
 - Celo Mainnet chain id: `42220` / `0xa4ec`
-- Alfajores chain id: `44787` / `0xaef3`
+- Celo Sepolia chain id: `11142220` / `0xaa044c`
+- Celo Sepolia RPC: `https://forno.celo-sepolia.celo-testnet.org`
+- Celo Sepolia explorer: `https://celo-sepolia.blockscout.com`
 - Mainnet cUSD: `0x765DE816845861e75A25fCA122bb6898B8B1282a`
-- Alfajores cUSD: `0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1`
 
 ## Hackathon Demo
 

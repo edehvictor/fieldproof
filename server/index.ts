@@ -10,6 +10,7 @@ const dataDir = join(rootDir, "data");
 const statePath = join(dataDir, "state.json");
 const seedPath = join(dataDir, "seed.json");
 const port = Number(process.env.PORT || 4173);
+const activeCeloNetwork = process.env.CELO_NETWORK === "mainnet" ? "mainnet" : "sepolia";
 
 const mimeTypes = {
   ".html": "text/html; charset=utf-8",
@@ -30,23 +31,35 @@ const typeLabels = {
 
 const celoConfig = {
   chain: "celo",
+  activeNetwork: activeCeloNetwork,
   mainnet: {
     chainId: 42220,
     chainIdHex: "0xa4ec",
     name: "Celo Mainnet",
     rpcUrl: "https://forno.celo.org",
     blockExplorer: "https://celoscan.io",
-    cUSD: "0x765DE816845861e75A25fCA122bb6898B8B1282a",
+    stableToken: "0x765DE816845861e75A25fCA122bb6898B8B1282a",
+    stableTokenSymbol: "cUSD",
   },
-  alfajores: {
-    chainId: 44787,
-    chainIdHex: "0xaef3",
-    name: "Celo Alfajores",
-    rpcUrl: "https://alfajores-forno.celo-testnet.org",
-    blockExplorer: "https://alfajores.celoscan.io",
-    cUSD: "0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1",
+  sepolia: {
+    chainId: 11142220,
+    chainIdHex: "0xaa044c",
+    name: "Celo Sepolia",
+    rpcUrl: process.env.CELO_RPC_URL || "https://forno.celo-sepolia.celo-testnet.org",
+    blockExplorer: "https://celo-sepolia.blockscout.com",
+    stableToken: process.env.STABLE_TOKEN_ADDRESS || "",
+    stableTokenSymbol: process.env.STABLE_TOKEN_SYMBOL || "cUSD",
   },
 };
+
+async function readDeploymentArtifact() {
+  const fileName = activeCeloNetwork === "mainnet" ? "mainnet.json" : "celo-sepolia.json";
+  try {
+    return JSON.parse(await readFile(join(rootDir, "deployments", fileName), "utf8"));
+  } catch {
+    return null;
+  }
+}
 
 async function ensureStateFile() {
   await mkdir(dataDir, { recursive: true });
@@ -167,7 +180,10 @@ async function handleApi(req, res, url) {
   }
 
   if (url.pathname === "/api/config") {
-    sendJson(res, 200, celoConfig);
+    sendJson(res, 200, {
+      ...celoConfig,
+      deployment: await readDeploymentArtifact(),
+    });
     return true;
   }
 

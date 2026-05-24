@@ -21,31 +21,42 @@ const celo = defineChain({
   },
 });
 
-const alfajores = defineChain({
-  id: 44787,
-  name: "Celo Alfajores",
+const celoSepolia = defineChain({
+  id: 11142220,
+  name: "Celo Sepolia",
   nativeCurrency: { decimals: 18, name: "CELO", symbol: "CELO" },
   rpcUrls: {
-    default: { http: ["https://alfajores-forno.celo-testnet.org"] },
+    default: { http: ["https://forno.celo-sepolia.celo-testnet.org"] },
   },
   blockExplorers: {
-    default: { name: "Alfajores Celoscan", url: "https://alfajores.celoscan.io" },
+    default: { name: "Celo Sepolia Blockscout", url: "https://celo-sepolia.blockscout.com" },
   },
 });
 
-const networkName = process.env.CELO_NETWORK === "mainnet" ? "mainnet" : "alfajores";
-const chain = networkName === "mainnet" ? celo : alfajores;
+const networkName = process.env.CELO_NETWORK === "mainnet" ? "mainnet" : "sepolia";
+const chain = networkName === "mainnet" ? celo : celoSepolia;
 const rpcUrl = process.env.CELO_RPC_URL || chain.rpcUrls.default.http[0];
-const privateKey = process.env.PRIVATE_KEY;
 
-if (!privateKey || !privateKey.startsWith("0x")) {
-  throw new Error("Set PRIVATE_KEY in .env before deploying to Celo.");
+function readPrivateKey() {
+  const rawPrivateKey = process.env.PRIVATE_KEY?.trim();
+  if (!rawPrivateKey) {
+    throw new Error("Set PRIVATE_KEY in .env before deploying to Celo.");
+  }
+
+  const privateKey = rawPrivateKey.startsWith("0x") ? rawPrivateKey : `0x${rawPrivateKey}`;
+  if (!/^0x[0-9a-fA-F]{64}$/.test(privateKey)) {
+    throw new Error("PRIVATE_KEY must be a 64-character hex key, with or without a 0x prefix.");
+  }
+
+  return privateKey as `0x${string}`;
 }
 
-const account = privateKeyToAccount(privateKey as `0x${string}`);
+const account = privateKeyToAccount(readPrivateKey());
 const transport = http(rpcUrl);
 const wallet = createWalletClient({ account, chain, transport });
 const publicClient = createPublicClient({ chain, transport });
+
+console.log(`Deploying FieldProof to ${chain.name} (${chain.id}) from ${account.address}`);
 
 async function loadArtifact(name) {
   return JSON.parse(await readFile(join(artifactsDir, `${name}.json`), "utf8"));
@@ -91,8 +102,10 @@ const deployment = {
 };
 
 await writeFile(
-  join(deploymentsDir, `${networkName}.json`),
+  join(deploymentsDir, networkName === "mainnet" ? "mainnet.json" : "celo-sepolia.json"),
   `${JSON.stringify(deployment, null, 2)}\n`,
 );
 
-console.log(`Deployment written to deployments/${networkName}.json`);
+console.log(
+  `Deployment written to deployments/${networkName === "mainnet" ? "mainnet.json" : "celo-sepolia.json"}`,
+);

@@ -60,6 +60,39 @@ interface FieldProofState {
   trend: TrendRow[];
 }
 
+interface CeloNetworkConfig {
+  chainId: number;
+  chainIdHex: string;
+  name: string;
+  rpcUrl: string;
+  blockExplorer: string;
+  stableToken: string;
+  stableTokenSymbol: string;
+}
+
+interface CeloDeploymentContract {
+  address: string;
+  transactionHash: string;
+}
+
+interface CeloDeployment {
+  network: string;
+  chainId: number;
+  deployer: string;
+  contracts: {
+    FieldProofEscrow: CeloDeploymentContract;
+    FieldProofRegistry: CeloDeploymentContract;
+  };
+  blockExplorer: string;
+}
+
+interface CeloConfig {
+  activeNetwork: "sepolia" | "mainnet";
+  mainnet: CeloNetworkConfig;
+  sepolia: CeloNetworkConfig;
+  deployment?: CeloDeployment | null;
+}
+
 interface EthereumProvider {
   request<T = unknown>(args: { method: string; params?: unknown[] }): Promise<T>;
 }
@@ -194,6 +227,8 @@ let state: FieldProofState = {
   ],
 };
 
+let celoRuntimeConfig: CeloConfig | null = null;
+
 const typeLabels: Record<string, string> = {
   cashout_fee: "Cash-out fee",
   merchant_acceptance: "Merchant acceptance",
@@ -242,6 +277,11 @@ const els = {
   verifierChecks: mustQuery<HTMLUListElement>("#verifierChecks"),
   scoreRing: mustQuery<HTMLElement>("#scoreRing"),
   proofRecords: mustQuery<HTMLElement>("#proofRecords"),
+  contractNetwork: mustQuery<HTMLElement>("#contractNetwork"),
+  escrowAddress: mustQuery<HTMLElement>("#escrowAddress"),
+  registryAddress: mustQuery<HTMLElement>("#registryAddress"),
+  escrowExplorer: mustQuery<HTMLAnchorElement>("#escrowExplorer"),
+  registryExplorer: mustQuery<HTMLAnchorElement>("#registryExplorer"),
   avgFee: mustQuery<HTMLElement>("#avgFee"),
   avgConfidence: mustQuery<HTMLElement>("#avgConfidence"),
   totalPayouts: mustQuery<HTMLElement>("#totalPayouts"),
@@ -250,16 +290,16 @@ const els = {
   walletStatus: mustQuery<HTMLElement>("#walletStatus"),
 };
 
-const celoMainnet = {
-  chainId: "0xa4ec",
-  chainName: "Celo Mainnet",
+const celoSepolia = {
+  chainId: "0xaa044c",
+  chainName: "Celo Sepolia",
   nativeCurrency: {
     name: "CELO",
     symbol: "CELO",
     decimals: 18,
   },
-  rpcUrls: ["https://forno.celo.org"],
-  blockExplorerUrls: ["https://celoscan.io"],
+  rpcUrls: ["https://forno.celo-sepolia.celo-testnet.org"],
+  blockExplorerUrls: ["https://celo-sepolia.blockscout.com"],
 };
 
 async function apiRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -284,10 +324,39 @@ async function loadRemoteState() {
   }
 }
 
+async function loadCeloConfig() {
+  try {
+    celoRuntimeConfig = await apiRequest<CeloConfig>("/api/config");
+  } catch (error) {
+    console.warn("Using local Celo config because API is unavailable.", error);
+  }
+}
+
 function setWalletStatus(text: string) {
   if (els.walletStatus) {
     els.walletStatus.textContent = text;
   }
+}
+
+function formatAddress(address?: string) {
+  return address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Pending";
+}
+
+function renderCeloContracts() {
+  const network = celoRuntimeConfig?.activeNetwork || "sepolia";
+  const networkConfig = celoRuntimeConfig?.[network];
+  const deployment = celoRuntimeConfig?.deployment;
+  const explorer = deployment?.blockExplorer || networkConfig?.blockExplorer || "https://celo-sepolia.blockscout.com";
+  const escrow = deployment?.contracts.FieldProofEscrow.address;
+  const registry = deployment?.contracts.FieldProofRegistry.address;
+
+  els.contractNetwork.textContent = networkConfig?.name || "Celo Sepolia";
+  els.escrowAddress.textContent = formatAddress(escrow);
+  els.registryAddress.textContent = formatAddress(registry);
+  els.escrowAddress.title = escrow || "";
+  els.registryAddress.title = registry || "";
+  els.escrowExplorer.href = escrow ? `${explorer}/address/${escrow}` : explorer;
+  els.registryExplorer.href = registry ? `${explorer}/address/${registry}` : explorer;
 }
 
 async function initMiniPayWallet() {
@@ -299,11 +368,11 @@ async function initMiniPayWallet() {
 
   try {
     const chainId = await provider.request({ method: "eth_chainId" });
-    if (chainId !== celoMainnet.chainId) {
+    if (chainId !== celoSepolia.chainId) {
       try {
         await provider.request({
           method: "wallet_switchEthereumChain",
-          params: [{ chainId: celoMainnet.chainId }],
+          params: [{ chainId: celoSepolia.chainId }],
         });
       } catch (switchError) {
         if (
@@ -314,7 +383,7 @@ async function initMiniPayWallet() {
         ) {
           await provider.request({
             method: "wallet_addEthereumChain",
-            params: [celoMainnet],
+            params: [celoSepolia],
           });
         } else {
           throw switchError;
@@ -323,7 +392,7 @@ async function initMiniPayWallet() {
     }
     const accounts = await provider.request<string[]>({ method: "eth_requestAccounts" });
     const account = accounts?.[0];
-    setWalletStatus(account ? `MiniPay ${account.slice(0, 6)}...${account.slice(-4)}` : "MiniPay ready");
+    setWalletStatus(account ? `Sepolia ${account.slice(0, 6)}...${account.slice(-4)}` : "Celo Sepolia ready");
   } catch (error) {
     setWalletStatus("MiniPay permission needed");
     console.warn("MiniPay/Celo wallet connection was not completed.", error);
@@ -702,9 +771,10 @@ els.requestForm.addEventListener("submit", createRequest);
 els.submissionForm.addEventListener("submit", submitEvidence);
 
 async function boot() {
-  await loadRemoteState();
+  await Promise.all([loadRemoteState(), loadCeloConfig()]);
   await initMiniPayWallet();
   formatPayload();
+  renderCeloContracts();
   renderIndex();
   renderTrendChart();
   renderTasks();

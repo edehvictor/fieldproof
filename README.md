@@ -27,8 +27,8 @@ The current build is a Celo-focused MVP with:
 - MiniPay contributor proof flow
 - local verifier API
 - Celo proof registry view
-- Solidity contract stubs for escrow and registry
-- deploy scripts for Celo networks
+- Solidity contracts for escrow and registry
+- deploy scripts for Celo Sepolia and mainnet
 
 Run locally:
 
@@ -72,11 +72,18 @@ docs/architecture.md
 
 ## Celo Integration Plan
 
-1. Deploy `FieldProofEscrow` on Celo Alfajores, then mainnet, with cUSD reward support.
+1. Deploy `FieldProofEscrow` on Celo Sepolia, then mainnet, with stablecoin reward support.
 2. Deploy `FieldProofRegistry` for accepted proof results.
 3. Use MiniPay/EIP-1193 auto-connect and Celo chain switching in the app.
 4. Register the verifier agent with Celo agent identity infrastructure.
 5. Replace local verifier rules with OCR/image verification and evidence storage.
+
+## Current Celo Sepolia Deployment
+
+- Deployer: `0x18883C2FF5a84b7F686FF0cfd400c6F3D6068b07`
+- `FieldProofEscrow`: `0x469ddae654095bb0c086d2e3b240e06cfc360e95`
+- `FieldProofRegistry`: `0x9830b6a837ca3a603611f944e9f70563159217be`
+- Explorer: `https://celo-sepolia.blockscout.com`
 
 ## Contract Commands
 
@@ -86,7 +93,7 @@ Compile:
 npm run compile:contracts
 ```
 
-Deploy to Alfajores:
+Deploy to Celo Sepolia:
 
 ```bash
 cp .env.example .env
@@ -94,6 +101,8 @@ cp .env.example .env
 npm run deploy:celo
 ```
 
-Set `CELO_NETWORK=mainnet`, `CELO_RPC_URL=https://forno.celo.org`, and the Celo mainnet cUSD address before deploying to mainnet.
+The Sepolia deploy writes public contract addresses to `deployments/celo-sepolia.json`.
+
+Set `CELO_NETWORK=mainnet`, `CELO_RPC_URL=https://forno.celo.org`, and the Celo mainnet stable token address before deploying to mainnet.
 
 Never commit funded private keys.

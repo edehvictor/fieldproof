@@ -1,0 +1,19 @@
+{
+  "network": "sepolia",
+  "chainId": 11142220,
+  "deployer": "0x18883C2FF5a84b7F686FF0cfd400c6F3D6068b07",
+  "verifierAddress": "0x18883C2FF5a84b7F686FF0cfd400c6F3D6068b07",
+  "publisherAddress": "0x18883C2FF5a84b7F686FF0cfd400c6F3D6068b07",
+  "contracts": {
+    "FieldProofEscrow": {
+      "address": "0x469ddae654095bb0c086d2e3b240e06cfc360e95",
+      "transactionHash": "0x87b2c5060c01bfe5b472123aac17ea234e81e370169341173f431deeed51c7bb"
+    },
+    "FieldProofRegistry": {
+      "address": "0x9830b6a837ca3a603611f944e9f70563159217be",
+      "transactionHash": "0xfd06f7e974e3f552649bf194fe010d9391e00fdfe98cbc727352de8275aae96a"
+    }
+  },
+  "blockExplorer": "https://celo-sepolia.blockscout.com",
+  "deployedAt": "2026-05-24T23:30:31.606Z"
+}

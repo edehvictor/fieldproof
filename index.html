@@ -212,7 +212,7 @@
 
               <div class="form-actions">
                 <button class="primary-action" type="submit">Fund Request</button>
-                <span class="tx-note">Escrow simulated in cUSD for demo build</span>
+                <span class="tx-note">Celo Sepolia escrow ready</span>
               </div>
             </form>
 
@@ -283,8 +283,26 @@
 
           <div class="registry-layout">
             <div class="contract-card">
-              <p class="eyebrow">Celo contracts</p>
+              <p class="eyebrow">Celo Sepolia contracts</p>
               <h3>FieldProofEscrow + FieldProofRegistry</h3>
+              <dl class="contract-summary">
+                <div>
+                  <dt>Network</dt>
+                  <dd id="contractNetwork">Celo Sepolia</dd>
+                </div>
+                <div>
+                  <dt>Escrow</dt>
+                  <dd id="escrowAddress">Loading</dd>
+                </div>
+                <div>
+                  <dt>Registry</dt>
+                  <dd id="registryAddress">Loading</dd>
+                </div>
+              </dl>
+              <div class="contract-links">
+                <a id="escrowExplorer" href="https://celo-sepolia.blockscout.com" target="_blank" rel="noreferrer">Escrow explorer</a>
+                <a id="registryExplorer" href="https://celo-sepolia.blockscout.com" target="_blank" rel="noreferrer">Registry explorer</a>
+              </div>
               <div class="contract-events">
                 <span>ProofRequestCreated</span>
                 <span>ProofSubmitted</span>

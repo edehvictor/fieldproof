@@ -844,6 +844,57 @@ pre {
   gap: 10px;
 }
 
+.contract-summary {
+  display: grid;
+  gap: 10px;
+  margin: 16px 0;
+}
+
+.contract-summary div {
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr);
+  gap: 10px;
+  align-items: baseline;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 196, 0, 0.13);
+  border-radius: 8px;
+  background: #0d100d;
+}
+
+.contract-summary dt {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.contract-summary dd {
+  margin: 0;
+  color: var(--ink);
+  font-family: "DM Mono", ui-monospace, monospace;
+  font-size: 0.8rem;
+  word-break: break-all;
+}
+
+.contract-links {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.contract-links a {
+  display: grid;
+  min-height: 40px;
+  place-items: center;
+  border: 1px solid rgba(28, 102, 216, 0.4);
+  border-radius: 8px;
+  background: rgba(28, 102, 216, 0.12);
+  color: #bfd3ff;
+  font-size: 0.82rem;
+  font-weight: 900;
+  text-decoration: none;
+}
+
 .contract-events span {
   padding: 11px 12px;
   border: 1px solid rgba(255, 196, 0, 0.13);

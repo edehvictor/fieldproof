@@ -724,6 +724,23 @@ textarea:focus {
   font-size: 0.84rem;
 }
 
+.chain-hint {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.chain-hint.is-error,
+.tx-note.is-error {
+  color: #ff9c9c;
+}
+
+.chain-hint.is-success,
+.tx-note.is-success {
+  color: var(--green);
+}
+
 pre {
   min-height: 268px;
   margin: 0;

@@ -25,7 +25,7 @@ The current build is a Celo-focused MVP with:
 - Stablecoin Reality Index dashboard
 - agent request composer
 - MiniPay contributor proof flow
-- local verifier API
+- local verifier API with onchain payout execution
 - Celo proof registry view
 - Solidity contracts for escrow and registry
 - deploy scripts for Celo Sepolia and mainnet
@@ -56,6 +56,14 @@ POST /api/submissions
 POST /api/reset
 ```
 
+The browser flow now signs real Celo Sepolia transactions:
+
+1. The requester approves test cUSD spend.
+2. The requester calls `FieldProofEscrow.createRequest(...)`.
+3. The contributor calls `submitProof(...)` with an evidence hash.
+4. The verifier backend calls `verifyProof(...)` and releases payout.
+5. The backend publishes the accepted record to `FieldProofRegistry`.
+
 ## Project Structure
 
 ```txt
@@ -83,7 +91,10 @@ docs/architecture.md
 - Deployer: `0x18883C2FF5a84b7F686FF0cfd400c6F3D6068b07`
 - `FieldProofEscrow`: `0x469ddae654095bb0c086d2e3b240e06cfc360e95`
 - `FieldProofRegistry`: `0x9830b6a837ca3a603611f944e9f70563159217be`
+- Test cUSD: `0xEF4d55D6dE8e8d73232827Cd1e9b2F2dBb45bC80`
 - Explorer: `https://celo-sepolia.blockscout.com`
+
+The requester wallet must hold test cUSD before funding a request. If it only has test CELO, swap test CELO to cUSD in Mento first.
 
 ## Contract Commands
 

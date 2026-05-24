@@ -18,6 +18,9 @@ interface ProofRequest {
   chain?: "celo";
   asset?: string;
   escrowTx?: string;
+  requester?: string | null;
+  contractRequestId?: string | null;
+  metadataHash?: string | null;
 }
 
 interface IndexRow {
@@ -43,6 +46,10 @@ interface ProofRecord {
 interface Submission {
   id: string;
   requestId: string;
+  contributor?: string;
+  contractSubmissionId?: string | null;
+  evidenceHash?: string;
+  submissionTx?: string | null;
 }
 
 interface TrendRow {
@@ -68,6 +75,7 @@ interface CeloNetworkConfig {
   blockExplorer: string;
   stableToken: string;
   stableTokenSymbol: string;
+  stableTokenDecimals: number;
 }
 
 interface CeloDeploymentContract {
@@ -277,9 +285,12 @@ const els = {
   verifierChecks: mustQuery<HTMLUListElement>("#verifierChecks"),
   scoreRing: mustQuery<HTMLElement>("#scoreRing"),
   proofRecords: mustQuery<HTMLElement>("#proofRecords"),
+  requestChainStatus: mustQuery<HTMLElement>("#requestChainStatus"),
+  submissionChainStatus: mustQuery<HTMLElement>("#submissionChainStatus"),
   contractNetwork: mustQuery<HTMLElement>("#contractNetwork"),
   escrowAddress: mustQuery<HTMLElement>("#escrowAddress"),
   registryAddress: mustQuery<HTMLElement>("#registryAddress"),
+  stableTokenAddress: mustQuery<HTMLElement>("#stableTokenAddress"),
   escrowExplorer: mustQuery<HTMLAnchorElement>("#escrowExplorer"),
   registryExplorer: mustQuery<HTMLAnchorElement>("#registryExplorer"),
   avgFee: mustQuery<HTMLElement>("#avgFee"),
@@ -300,6 +311,14 @@ const celoSepolia = {
   },
   rpcUrls: ["https://forno.celo-sepolia.celo-testnet.org"],
   blockExplorerUrls: ["https://celo-sepolia.blockscout.com"],
+};
+
+const functionSelectors = {
+  approve: "0x095ea7b3",
+  allowance: "0xdd62ed3e",
+  balanceOf: "0x70a08231",
+  createRequest: "0x0b934572",
+  submitProof: "0x2f19c56a",
 };
 
 async function apiRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -349,54 +368,190 @@ function renderCeloContracts() {
   const explorer = deployment?.blockExplorer || networkConfig?.blockExplorer || "https://celo-sepolia.blockscout.com";
   const escrow = deployment?.contracts.FieldProofEscrow.address;
   const registry = deployment?.contracts.FieldProofRegistry.address;
+  const stableToken = networkConfig?.stableToken;
 
   els.contractNetwork.textContent = networkConfig?.name || "Celo Sepolia";
   els.escrowAddress.textContent = formatAddress(escrow);
   els.registryAddress.textContent = formatAddress(registry);
+  els.stableTokenAddress.textContent = formatAddress(stableToken);
   els.escrowAddress.title = escrow || "";
   els.registryAddress.title = registry || "";
+  els.stableTokenAddress.title = stableToken || "";
   els.escrowExplorer.href = escrow ? `${explorer}/address/${escrow}` : explorer;
   els.registryExplorer.href = registry ? `${explorer}/address/${registry}` : explorer;
 }
 
-async function initMiniPayWallet() {
+function setInlineStatus(element: HTMLElement, message: string, tone: "muted" | "success" | "error" = "muted") {
+  element.textContent = message;
+  element.classList.toggle("is-success", tone === "success");
+  element.classList.toggle("is-error", tone === "error");
+}
+
+function strip0x(value: string) {
+  return value.startsWith("0x") ? value.slice(2) : value;
+}
+
+function toQuantity(value: bigint) {
+  return `0x${value.toString(16)}`;
+}
+
+function encodeAddress(value: string) {
+  const address = strip0x(value);
+  if (!/^[0-9a-fA-F]{40}$/.test(address)) {
+    throw new Error(`Invalid EVM address: ${value}`);
+  }
+  return address.toLowerCase().padStart(64, "0");
+}
+
+function encodeUint(value: bigint | number | string) {
+  const bigintValue = BigInt(value);
+  if (bigintValue < 0n) {
+    throw new Error("Cannot ABI-encode a negative integer.");
+  }
+  return bigintValue.toString(16).padStart(64, "0");
+}
+
+function encodeBytes32(value: string) {
+  const bytes = strip0x(value);
+  if (!/^[0-9a-fA-F]{64}$/.test(bytes)) {
+    throw new Error(`Expected bytes32 hex value: ${value}`);
+  }
+  return bytes.toLowerCase();
+}
+
+function encodeCall(selector: string, params: string[]) {
+  return `0x${strip0x(selector)}${params.join("")}`;
+}
+
+function parseUnits(value: string | number, decimals: number) {
+  const normalized = String(value).trim();
+  const [wholePart, fractionPart = ""] = normalized.split(".");
+  const whole = BigInt(wholePart || "0") * 10n ** BigInt(decimals);
+  const fraction = BigInt((fractionPart + "0".repeat(decimals)).slice(0, decimals) || "0");
+  return whole + fraction;
+}
+
+function formatUnits(value: bigint, decimals: number) {
+  const base = 10n ** BigInt(decimals);
+  const whole = value / base;
+  const fraction = (value % base).toString().padStart(decimals, "0").slice(0, 4).replace(/0+$/, "");
+  return fraction ? `${whole}.${fraction}` : whole.toString();
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function sha256Hex(input: string) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(input));
+  return `0x${[...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("")}`;
+}
+
+function getOnchainContext() {
+  const network = celoRuntimeConfig?.activeNetwork || "sepolia";
+  const networkConfig = celoRuntimeConfig?.[network];
+  const deployment = celoRuntimeConfig?.deployment;
+  const escrow = deployment?.contracts.FieldProofEscrow.address;
+  const registry = deployment?.contracts.FieldProofRegistry.address;
+  const stableToken = networkConfig?.stableToken;
+
+  if (!networkConfig || !deployment || !escrow || !registry || !stableToken) {
+    throw new Error("Celo Sepolia contract or stable-token config is missing.");
+  }
+
+  return {
+    network,
+    networkConfig,
+    deployment,
+    escrow,
+    registry,
+    stableToken,
+    decimals: networkConfig.stableTokenDecimals || 18,
+    symbol: networkConfig.stableTokenSymbol || "cUSD",
+  };
+}
+
+async function ensureCeloWallet(requestAccounts = true) {
   const provider = window.ethereum;
   if (!provider) {
     setWalletStatus("MiniPay demo mode");
-    return;
+    throw new Error("Open this app in MiniPay or MetaMask to sign Celo Sepolia transactions.");
   }
 
-  try {
-    const chainId = await provider.request({ method: "eth_chainId" });
-    if (chainId !== celoSepolia.chainId) {
-      try {
+  const chainId = await provider.request<string>({ method: "eth_chainId" });
+  if (chainId !== celoSepolia.chainId) {
+    try {
+      await provider.request({
+        method: "wallet_switchEthereumChain",
+        params: [{ chainId: celoSepolia.chainId }],
+      });
+    } catch (switchError) {
+      if (
+        typeof switchError === "object" &&
+        switchError !== null &&
+        "code" in switchError &&
+        switchError.code === 4902
+      ) {
         await provider.request({
-          method: "wallet_switchEthereumChain",
-          params: [{ chainId: celoSepolia.chainId }],
+          method: "wallet_addEthereumChain",
+          params: [celoSepolia],
         });
-      } catch (switchError) {
-        if (
-          typeof switchError === "object" &&
-          switchError !== null &&
-          "code" in switchError &&
-          switchError.code === 4902
-        ) {
-          await provider.request({
-            method: "wallet_addEthereumChain",
-            params: [celoSepolia],
-          });
-        } else {
-          throw switchError;
-        }
+      } else {
+        throw switchError;
       }
     }
-    const accounts = await provider.request<string[]>({ method: "eth_requestAccounts" });
-    const account = accounts?.[0];
-    setWalletStatus(account ? `Sepolia ${account.slice(0, 6)}...${account.slice(-4)}` : "Celo Sepolia ready");
+  }
+
+  const accounts = await provider.request<string[]>({
+    method: requestAccounts ? "eth_requestAccounts" : "eth_accounts",
+  });
+  const account = accounts?.[0];
+  setWalletStatus(account ? `Sepolia ${account.slice(0, 6)}...${account.slice(-4)}` : "Connect wallet");
+  if (requestAccounts && !account) {
+    throw new Error("Wallet connection was not completed.");
+  }
+
+  return { provider, account };
+}
+
+async function initMiniPayWallet() {
+  try {
+    await ensureCeloWallet(false);
   } catch (error) {
-    setWalletStatus("MiniPay permission needed");
+    setWalletStatus(window.ethereum ? "Connect wallet" : "MiniPay demo mode");
     console.warn("MiniPay/Celo wallet connection was not completed.", error);
   }
+}
+
+async function readUint(provider: EthereumProvider, to: string, data: string) {
+  const result = await provider.request<string>({
+    method: "eth_call",
+    params: [{ to, data }, "latest"],
+  });
+  return result && result !== "0x" ? BigInt(result) : 0n;
+}
+
+async function waitForWalletReceipt(provider: EthereumProvider, txHash: string) {
+  for (let attempt = 0; attempt < 60; attempt += 1) {
+    const receipt = await provider.request({
+      method: "eth_getTransactionReceipt",
+      params: [txHash],
+    });
+    if (receipt) {
+      return receipt;
+    }
+    await sleep(2000);
+  }
+  throw new Error(`Timed out waiting for transaction ${txHash}`);
+}
+
+async function sendWalletTransaction(provider: EthereumProvider, from: string, to: string, data: string) {
+  const hash = await provider.request<string>({
+    method: "eth_sendTransaction",
+    params: [{ from, to, data, value: "0x0" }],
+  });
+  await waitForWalletReceipt(provider, hash);
+  return hash;
 }
 
 function formatPayload() {
@@ -562,6 +717,10 @@ function renderTasks() {
               <dt>Status</dt>
               <dd>${request.status}</dd>
             </div>
+            <div>
+              <dt>Chain</dt>
+              <dd>${request.contractRequestId ? `#${request.contractRequestId}` : "demo"}</dd>
+            </div>
           </dl>
         </article>
       `,
@@ -611,6 +770,7 @@ async function createRequest(event) {
   event.preventDefault();
   const reward = Number(els.reward.value);
   const confirmations = Number(els.confirmations.value);
+  const submitButton = els.requestForm.querySelector<HTMLButtonElement>("button[type='submit']");
   const payload = {
     question: els.agentQuestion.value.trim(),
     proofType: els.proofType.value,
@@ -620,27 +780,84 @@ async function createRequest(event) {
   };
 
   try {
+    if (submitButton) {
+      submitButton.disabled = true;
+    }
+    setInlineStatus(els.requestChainStatus, "Connecting Celo Sepolia wallet...", "muted");
+    const { provider, account } = await ensureCeloWallet(true);
+    const ctx = getOnchainContext();
+    const rewardUnits = parseUnits(reward.toFixed(6), ctx.decimals);
+    const totalFunding = rewardUnits * BigInt(confirmations);
+    const balanceData = encodeCall(functionSelectors.balanceOf, [encodeAddress(account)]);
+    const balance = await readUint(provider, ctx.stableToken, balanceData);
+
+    if (balance < totalFunding) {
+      throw new Error(
+        `Need ${formatUnits(totalFunding, ctx.decimals)} ${ctx.symbol} to fund this request. Current balance: ${formatUnits(balance, ctx.decimals)} ${ctx.symbol}. Swap test CELO to ${ctx.symbol} in Mento, then retry.`,
+      );
+    }
+
+    const allowanceData = encodeCall(functionSelectors.allowance, [
+      encodeAddress(account),
+      encodeAddress(ctx.escrow),
+    ]);
+    const allowance = await readUint(provider, ctx.stableToken, allowanceData);
+    if (allowance < totalFunding) {
+      setInlineStatus(els.requestChainStatus, `Approving ${ctx.symbol} escrow...`, "muted");
+      const approveData = encodeCall(functionSelectors.approve, [
+        encodeAddress(ctx.escrow),
+        encodeUint(totalFunding),
+      ]);
+      await sendWalletTransaction(provider, account, ctx.stableToken, approveData);
+    }
+
+    setInlineStatus(els.requestChainStatus, "Funding FieldProofEscrow on Celo Sepolia...", "muted");
+    const metadataHash = await sha256Hex(
+      JSON.stringify({
+        ...payload,
+        asset: ctx.symbol,
+        stableToken: ctx.stableToken,
+        requester: account,
+        createdAt: new Date().toISOString(),
+      }),
+    );
+    const deadline = BigInt(Math.floor(Date.now() / 1000) + 60 * 60 * 48);
+    const createRequestData = encodeCall(functionSelectors.createRequest, [
+      encodeAddress(ctx.stableToken),
+      encodeUint(rewardUnits),
+      encodeUint(confirmations),
+      encodeUint(deadline),
+      encodeBytes32(metadataHash),
+    ]);
+    const escrowTx = await sendWalletTransaction(provider, account, ctx.escrow, createRequestData);
+
+    setInlineStatus(els.requestChainStatus, "Indexing request transaction...", "muted");
     const result = await apiRequest<CreateRequestResponse>("/api/requests", {
       method: "POST",
-      body: JSON.stringify(payload),
+      body: JSON.stringify({
+        ...payload,
+        mode: "onchain",
+        asset: ctx.symbol,
+        requester: account,
+        metadataHash,
+        escrowTx,
+      }),
     });
     state = result.state;
+    setInlineStatus(
+      els.requestChainStatus,
+      `Funded on Celo Sepolia: request #${result.request.contractRequestId}`,
+      "success",
+    );
   } catch (error) {
-    const request = {
-      id: `fp-req-${Math.floor(2000 + Math.random() * 8000)}`,
-      question: payload.question,
-      type: payload.proofType,
-      city: payload.city,
-      reward,
-      confirmations,
-      funded: reward * confirmations,
-      status: "collecting",
-      created: "now",
-      chain: "celo" as const,
-      asset: "cUSD",
-    };
-    state.requests.unshift(request);
-    console.warn("Created proof request locally because API is unavailable.", error);
+    const message = error instanceof Error ? error.message : "Unable to fund request on Celo Sepolia.";
+    setInlineStatus(els.requestChainStatus, message, "error");
+    console.warn("Onchain proof request was not completed.", error);
+    return;
+  } finally {
+    if (submitButton) {
+      submitButton.disabled = false;
+    }
   }
 
   renderTasks();
@@ -650,14 +867,50 @@ async function createRequest(event) {
 async function submitEvidence(event) {
   event.preventDefault();
   const request = state.requests.find((item) => item.id === els.submissionRequest.value);
+  if (!request) {
+    setInlineStatus(els.submissionChainStatus, "Select a proof request before submitting evidence.", "error");
+    return;
+  }
   const reportedValue = mustQuery<HTMLInputElement>("#reportedValue").value.trim();
   const note = mustQuery<HTMLTextAreaElement>("#localNote").value.trim();
   const evidenceType = mustQuery<HTMLSelectElement>("#evidenceType").value;
+  const submitButton = els.submissionForm.querySelector<HTMLButtonElement>("button[type='submit']");
   let confidence;
   let accepted;
   let checks;
 
   try {
+    if (submitButton) {
+      submitButton.disabled = true;
+    }
+    let contributor = "minipay-demo-user";
+    let evidenceHash = await sha256Hex(
+      JSON.stringify({
+        requestId: request.id,
+        contractRequestId: request.contractRequestId,
+        reportedValue,
+        evidenceType,
+        note,
+        createdAt: new Date().toISOString(),
+      }),
+    );
+    let submissionTx = null;
+
+    if (request.contractRequestId) {
+      setInlineStatus(els.submissionChainStatus, "Submitting evidence hash to FieldProofEscrow...", "muted");
+      const { provider, account } = await ensureCeloWallet(true);
+      const ctx = getOnchainContext();
+      contributor = account;
+      const submitProofData = encodeCall(functionSelectors.submitProof, [
+        encodeUint(request.contractRequestId),
+        encodeBytes32(evidenceHash),
+      ]);
+      submissionTx = await sendWalletTransaction(provider, account, ctx.escrow, submitProofData);
+      setInlineStatus(els.submissionChainStatus, "Verifier signing payout and registry record...", "muted");
+    } else {
+      setInlineStatus(els.submissionChainStatus, "Demo request selected. Create an onchain request for real payout.", "muted");
+    }
+
     const result = await apiRequest<SubmissionResponse>("/api/submissions", {
       method: "POST",
       body: JSON.stringify({
@@ -665,26 +918,31 @@ async function submitEvidence(event) {
         reportedValue,
         evidenceType,
         localNote: note,
+        contributor,
+        evidenceHash,
+        submissionTx,
       }),
     });
     state = result.state;
     confidence = result.submission.verification.confidence;
     accepted = result.submission.verification.accepted;
     checks = result.submission.verification.checks.map((check) => [check.label, check.detail]);
-  } catch (error) {
-    confidence = Math.min(
-      96,
-      82 + Math.round(Math.random() * 8) + (reportedValue.includes("%") ? 4 : 0),
+    setInlineStatus(
+      els.submissionChainStatus,
+      request.contractRequestId && result.record?.tx
+        ? `Proof accepted. Payout tx: ${formatAddress(result.record.tx)}`
+        : "Evidence checked by local verifier.",
+      accepted ? "success" : "muted",
     );
-    accepted = confidence >= 86;
-    checks = [
-      ["Evidence relevance", "Receipt/photo matches request type"],
-      ["Location window", `${request.city} geofence accepted`],
-      ["Duplicate check", "Evidence hash is unique"],
-      ["Value extraction", reportedValue],
-      ["Verifier note", note],
-    ];
-    console.warn("Verified proof locally because API is unavailable.", error);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unable to submit proof on Celo Sepolia.";
+    setInlineStatus(els.submissionChainStatus, message, "error");
+    console.warn("Proof submission was not completed.", error);
+    return;
+  } finally {
+    if (submitButton) {
+      submitButton.disabled = false;
+    }
   }
 
   els.verifierTitle.textContent = accepted ? "Proof accepted" : "Manual review needed";

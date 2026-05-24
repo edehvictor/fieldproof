@@ -212,8 +212,11 @@
 
               <div class="form-actions">
                 <button class="primary-action" type="submit">Fund Request</button>
-                <span class="tx-note">Celo Sepolia escrow ready</span>
+                <span class="tx-note" id="requestChainStatus">Celo Sepolia escrow ready</span>
               </div>
+              <p class="chain-hint">
+                Uses test cUSD on Celo Sepolia. If your balance is empty, swap test CELO to cUSD in Mento before funding.
+              </p>
             </form>
 
             <aside class="agent-preview">
@@ -264,6 +267,7 @@
                 <textarea id="localNote" rows="3">Agent quoted 800 NGN fee to cash out 20 USDT. MiniPay accepted for payment confirmation.</textarea>
               </label>
               <button class="primary-action" type="submit">Submit Proof</button>
+              <p class="chain-hint" id="submissionChainStatus">Create an onchain request, then submit evidence to the Sepolia escrow.</p>
             </form>
 
             <aside class="verifier-card">
@@ -297,6 +301,10 @@
                 <div>
                   <dt>Registry</dt>
                   <dd id="registryAddress">Loading</dd>
+                </div>
+                <div>
+                  <dt>Asset</dt>
+                  <dd id="stableTokenAddress">Loading</dd>
                 </div>
               </dl>
               <div class="contract-links">

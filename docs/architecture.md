@@ -32,8 +32,8 @@ Raw media should live in object storage. Onchain storage keeps hashes and concis
 The MVP uses `server/index.ts` as a zero-framework Node API:
 
 - `GET /api/state`: returns requests, submissions, proof records, and index values.
-- `POST /api/requests`: creates a Celo-funded proof request object.
-- `POST /api/submissions`: runs verifier rules, records submission metadata, and updates the index on accepted proof.
+- `POST /api/requests`: indexes a wallet-signed Celo escrow transaction and creates the proof request object.
+- `POST /api/submissions`: parses the wallet-signed proof submission, runs verifier rules, releases accepted payouts, publishes registry metadata, and updates the index.
 - `GET /api/config`: returns Celo Sepolia and mainnet chain config for MiniPay/EIP-1193 clients.
 
 The local state lives in `data/state.json`, copied from `data/seed.json` when missing.
@@ -48,6 +48,7 @@ Supported Celo defaults:
 - Celo Sepolia chain id: `11142220` / `0xaa044c`
 - Celo Sepolia RPC: `https://forno.celo-sepolia.celo-testnet.org`
 - Celo Sepolia explorer: `https://celo-sepolia.blockscout.com`
+- Celo Sepolia cUSD: `0xEF4d55D6dE8e8d73232827Cd1e9b2F2dBb45bC80`
 - Mainnet cUSD: `0x765DE816845861e75A25fCA122bb6898B8B1282a`
 
 ## Hackathon Demo

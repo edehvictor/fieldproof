@@ -1,16 +1,28 @@
+import "dotenv/config";
 import { createHash, randomUUID } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { access, copyFile, mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { extname, join, normalize, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  createPublicClient,
+  createWalletClient,
+  defineChain,
+  encodeFunctionData,
+  http,
+  parseEventLogs,
+} from "viem";
+import { privateKeyToAccount } from "viem/accounts";
 
 const rootDir = resolve(fileURLToPath(new URL("../", import.meta.url)));
+const artifactsDir = join(rootDir, "artifacts");
 const dataDir = join(rootDir, "data");
 const statePath = join(dataDir, "state.json");
 const seedPath = join(dataDir, "seed.json");
 const port = Number(process.env.PORT || 4173);
 const activeCeloNetwork = process.env.CELO_NETWORK === "mainnet" ? "mainnet" : "sepolia";
+const celoSepoliaCusd = "0xEF4d55D6dE8e8d73232827Cd1e9b2F2dBb45bC80";
 
 const mimeTypes = {
   ".html": "text/html; charset=utf-8",
@@ -40,6 +52,7 @@ const celoConfig = {
     blockExplorer: "https://celoscan.io",
     stableToken: "0x765DE816845861e75A25fCA122bb6898B8B1282a",
     stableTokenSymbol: "cUSD",
+    stableTokenDecimals: 18,
   },
   sepolia: {
     chainId: 11142220,
@@ -47,10 +60,43 @@ const celoConfig = {
     name: "Celo Sepolia",
     rpcUrl: process.env.CELO_RPC_URL || "https://forno.celo-sepolia.celo-testnet.org",
     blockExplorer: "https://celo-sepolia.blockscout.com",
-    stableToken: process.env.STABLE_TOKEN_ADDRESS || "",
+    stableToken: process.env.STABLE_TOKEN_ADDRESS || celoSepoliaCusd,
     stableTokenSymbol: process.env.STABLE_TOKEN_SYMBOL || "cUSD",
+    stableTokenDecimals: Number(process.env.STABLE_TOKEN_DECIMALS || 18),
   },
 };
+
+const celoMainnet = defineChain({
+  id: 42220,
+  name: "Celo",
+  nativeCurrency: { decimals: 18, name: "CELO", symbol: "CELO" },
+  rpcUrls: {
+    default: { http: ["https://forno.celo.org"] },
+  },
+  blockExplorers: {
+    default: { name: "Celoscan", url: "https://celoscan.io" },
+  },
+});
+
+const celoSepolia = defineChain({
+  id: 11142220,
+  name: "Celo Sepolia",
+  nativeCurrency: { decimals: 18, name: "CELO", symbol: "CELO" },
+  rpcUrls: {
+    default: { http: ["https://forno.celo-sepolia.celo-testnet.org"] },
+  },
+  blockExplorers: {
+    default: { name: "Celo Sepolia Blockscout", url: "https://celo-sepolia.blockscout.com" },
+  },
+});
+
+const activeChain = activeCeloNetwork === "mainnet" ? celoMainnet : celoSepolia;
+const activeRpcUrl =
+  activeCeloNetwork === "mainnet" ? celoConfig.mainnet.rpcUrl : celoConfig.sepolia.rpcUrl;
+const publicClient = createPublicClient({
+  chain: activeChain,
+  transport: http(activeRpcUrl),
+});
 
 async function readDeploymentArtifact() {
   const fileName = activeCeloNetwork === "mainnet" ? "mainnet.json" : "celo-sepolia.json";
@@ -59,6 +105,110 @@ async function readDeploymentArtifact() {
   } catch {
     return null;
   }
+}
+
+async function loadArtifact(name) {
+  return JSON.parse(await readFile(join(artifactsDir, `${name}.json`), "utf8"));
+}
+
+function readPrivateKey() {
+  const rawPrivateKey = process.env.PRIVATE_KEY?.trim();
+  if (!rawPrivateKey) {
+    return null;
+  }
+
+  const privateKey = rawPrivateKey.startsWith("0x") ? rawPrivateKey : `0x${rawPrivateKey}`;
+  if (!/^0x[0-9a-fA-F]{64}$/.test(privateKey)) {
+    throw new Error("PRIVATE_KEY must be a 64-character hex key, with or without a 0x prefix.");
+  }
+
+  return privateKey as `0x${string}`;
+}
+
+function getVerifierWallet() {
+  const privateKey = readPrivateKey();
+  if (!privateKey) {
+    return null;
+  }
+
+  const account = privateKeyToAccount(privateKey);
+  return createWalletClient({
+    account,
+    chain: activeChain,
+    transport: http(activeRpcUrl),
+  });
+}
+
+async function parseEscrowEvent(txHash, eventName) {
+  const deployment = await readDeploymentArtifact();
+  const escrowAddress = deployment?.contracts?.FieldProofEscrow?.address?.toLowerCase();
+  if (!escrowAddress) {
+    throw new Error("FieldProofEscrow deployment is missing.");
+  }
+
+  const artifact = await loadArtifact("FieldProofEscrow");
+  const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
+  const logs = parseEventLogs({
+    abi: artifact.abi,
+    eventName,
+    logs: receipt.logs,
+  });
+
+  return logs.find((log) => log.address.toLowerCase() === escrowAddress);
+}
+
+async function runOnchainVerification({ request, submission, verification }) {
+  const deployment = await readDeploymentArtifact();
+  const wallet = getVerifierWallet();
+  if (!deployment || !wallet) {
+    return {};
+  }
+
+  const escrow = deployment.contracts.FieldProofEscrow.address;
+  const registry = deployment.contracts.FieldProofRegistry.address;
+  const escrowArtifact = await loadArtifact("FieldProofEscrow");
+  const registryArtifact = await loadArtifact("FieldProofRegistry");
+  const confidenceBps = Math.min(10_000, Math.round(verification.confidence * 100));
+  const requestId = BigInt(request.contractRequestId);
+  const submissionId = BigInt(submission.contractSubmissionId);
+
+  const verifyHash = (await (wallet as any).sendTransaction({
+    to: escrow,
+    data: encodeFunctionData({
+      abi: escrowArtifact.abi,
+      functionName: "verifyProof",
+      args: [requestId, submissionId, verification.accepted, confidenceBps],
+    }),
+  })) as `0x${string}`;
+  await publicClient.waitForTransactionReceipt({ hash: verifyHash });
+
+  let recordHash = null;
+  if (verification.accepted) {
+    const resultHash = fakeTxHash(`${request.id}-${submission.reportedValue}-result`);
+    const recordHashTx = (await (wallet as any).sendTransaction({
+      to: registry,
+      data: encodeFunctionData({
+        abi: registryArtifact.abi,
+        functionName: "publishRecord",
+        args: [
+          requestId,
+          resultHash,
+          submission.evidenceHash,
+          request.city,
+          typeLabels[request.type] || request.type,
+          submission.reportedValue,
+          confidenceBps,
+        ],
+      }),
+    })) as `0x${string}`;
+    await publicClient.waitForTransactionReceipt({ hash: recordHashTx });
+    recordHash = recordHashTx;
+  }
+
+  return {
+    payoutTx: verifyHash,
+    recordTx: recordHash,
+  };
 }
 
 async function ensureStateFile() {
@@ -202,8 +352,20 @@ async function handleApi(req, res, url) {
     const body = await readBody(req);
     const reward = Number(body.reward || 0.8);
     const confirmations = Number(body.confirmations || 3);
+    let contractRequestId = null;
+    let escrowTx = body.escrowTx;
+
+    if (body.mode === "onchain" && body.escrowTx) {
+      const event = await parseEscrowEvent(body.escrowTx, "ProofRequestCreated");
+      if (!event) {
+        sendJson(res, 422, { error: "ProofRequestCreated event not found for escrow transaction." });
+        return true;
+      }
+      contractRequestId = (event as any).args.requestId.toString();
+    }
+
     const request = {
-      id: `fp-req-${Date.now().toString(36)}`,
+      id: contractRequestId ? `fp-req-${contractRequestId}` : `fp-req-${Date.now().toString(36)}`,
       question: String(body.question || "").trim(),
       type: body.proofType || body.type || "cashout_fee",
       city: body.city || "Lagos",
@@ -213,8 +375,11 @@ async function handleApi(req, res, url) {
       status: "collecting",
       created: "now",
       chain: "celo",
-      asset: "cUSD",
-      escrowTx: fakeTxHash(`${body.question}-${Date.now()}-escrow`),
+      asset: body.asset || celoConfig.sepolia.stableTokenSymbol,
+      requester: body.requester || null,
+      contractRequestId,
+      metadataHash: body.metadataHash || null,
+      escrowTx: escrowTx || fakeTxHash(`${body.question}-${Date.now()}-escrow`),
     };
     const state = await readState();
     state.requests.unshift(request);
@@ -232,21 +397,35 @@ async function handleApi(req, res, url) {
       return true;
     }
 
-    const evidenceHash = fakeTxHash(`${request.id}-${body.reportedValue}-${body.localNote}`);
+    const evidenceHash = body.evidenceHash || fakeTxHash(`${request.id}-${body.reportedValue}-${body.localNote}`);
     const verification = verifySubmission({
       request,
       reportedValue: body.reportedValue,
       evidenceType: body.evidenceType,
       localNote: body.localNote,
     });
+    let contractSubmissionId = null;
+    let onchainTxs: { payoutTx?: string; recordTx?: string | null } = {};
+
+    if (body.submissionTx && request.contractRequestId) {
+      const event = await parseEscrowEvent(body.submissionTx, "ProofSubmitted");
+      if (!event) {
+        sendJson(res, 422, { error: "ProofSubmitted event not found for submission transaction." });
+        return true;
+      }
+      contractSubmissionId = (event as any).args.submissionId.toString();
+    }
+
     const submission = {
-      id: `sub-${randomUUID().slice(0, 8)}`,
+      id: contractSubmissionId ? `sub-${request.contractRequestId}-${contractSubmissionId}` : `sub-${randomUUID().slice(0, 8)}`,
       requestId: request.id,
       contributor: body.contributor || "minipay-demo-user",
+      contractSubmissionId,
       reportedValue: body.reportedValue || "",
       evidenceType: body.evidenceType || "Receipt photo",
       localNote: body.localNote || "",
       evidenceHash,
+      submissionTx: body.submissionTx || null,
       status: verification.accepted ? "accepted" : "review",
       verification,
       createdAt: new Date().toISOString(),
@@ -255,8 +434,12 @@ async function handleApi(req, res, url) {
 
     let record = null;
     if (verification.accepted) {
-      const payoutTx = fakeTxHash(`${submission.id}-celo-payout`);
-      const recordTx = fakeTxHash(`${submission.id}-registry`);
+      if (body.submissionTx && request.contractRequestId && contractSubmissionId) {
+        onchainTxs = await runOnchainVerification({ request, submission, verification });
+      }
+
+      const payoutTx = onchainTxs.payoutTx || fakeTxHash(`${submission.id}-celo-payout`);
+      const recordTx = onchainTxs.recordTx || fakeTxHash(`${submission.id}-registry`);
       record = {
         id: `proof-${randomUUID().slice(0, 5)}`,
         title: `${request.city} ${typeLabels[request.type] || request.type} verified`,
@@ -267,6 +450,8 @@ async function handleApi(req, res, url) {
         chain: "celo",
         recordTx,
         evidenceHash,
+        contractRequestId: request.contractRequestId || null,
+        contractSubmissionId,
       };
       state.records.unshift(record);
       updateIndex(state, request, submission.reportedValue, verification.confidence);

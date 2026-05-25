@@ -566,7 +566,7 @@ h3 {
 }
 
 .chart-frame {
-  min-height: 220px;
+  min-height: 260px;
   overflow: hidden;
   border: 1px solid rgba(255, 196, 0, 0.13);
   border-radius: 8px;
@@ -577,22 +577,59 @@ h3 {
   background-size: 38px 38px;
 }
 
-#realityChart {
-  display: block;
-  width: 100%;
-  height: 220px;
+.recharts-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(220px, 0.7fr);
+  gap: 12px;
+  min-height: 260px;
+  padding: 12px;
 }
 
-.chart-grid-line {
-  stroke: rgba(255, 255, 255, 0.09);
-  stroke-width: 1;
+.recharts-card {
+  min-width: 0;
+  min-height: 236px;
+  border: 1px solid rgba(255, 196, 0, 0.12);
+  border-radius: 8px;
+  background: rgba(7, 8, 7, 0.72);
+  padding: 12px;
 }
 
-.chart-axis,
-.chart-legend {
-  fill: var(--muted);
+.recharts-card h4 {
+  margin: 0 0 8px;
+  color: var(--ink);
+  font-size: 0.84rem;
   font-family: "DM Mono", ui-monospace, monospace;
-  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.recharts-empty {
+  display: grid;
+  min-height: 260px;
+  place-items: center;
+  color: var(--muted);
+  font-family: "DM Mono", ui-monospace, monospace;
+}
+
+.recharts-tooltip {
+  border: 1px solid rgba(255, 196, 0, 0.24);
+  border-radius: 8px;
+  background: #070807;
+  color: var(--ink);
+  padding: 10px 12px;
+  box-shadow: var(--shadow);
+}
+
+.recharts-tooltip strong {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--gold);
+  font-family: "DM Mono", ui-monospace, monospace;
+}
+
+.recharts-tooltip p {
+  margin: 2px 0;
+  color: var(--muted);
+  font-size: 0.78rem;
 }
 
 .index-table {
@@ -1018,10 +1055,12 @@ pre {
     padding: 14px;
   }
 
-  .chart-frame,
-  #realityChart {
-    height: 190px;
-    min-height: 190px;
+  .recharts-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .chart-frame {
+    min-height: 430px;
   }
 
   h1 {

@@ -4,7 +4,8 @@
   "description": "Verified stablecoin reality for AI agents, powered by MiniPay users and Celo.",
   "main": "index.html",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && npm run build:charts",
+    "build:charts": "esbuild charts.tsx --bundle --format=esm --jsx=automatic --outfile=charts.js",
     "start": "npm run build && node server/index.js",
     "check": "npm run build && node scripts/check-static.js",
     "compile:contracts": "npm run build && node scripts/compile-contracts.js",
@@ -22,11 +23,17 @@
   "type": "module",
   "dependencies": {
     "dotenv": "^17.4.2",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "recharts": "^3.8.1",
     "solc": "^0.8.35",
     "viem": "^2.50.4"
   },
   "devDependencies": {
     "@types/node": "^25.9.1",
+    "@types/react": "^19.2.15",
+    "@types/react-dom": "^19.2.3",
+    "esbuild": "^0.28.0",
     "typescript": "^6.0.3"
   }
 }

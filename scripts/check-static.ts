@@ -1,7 +1,13 @@
 import { readFile } from "node:fs/promises";
 
 const root = new URL("../", import.meta.url);
-const requiredFiles = ["index.html", "styles.css", "app.js", "contracts/FieldProofEscrow.sol"];
+const requiredFiles = [
+  "index.html",
+  "styles.css",
+  "app.js",
+  "charts.js",
+  "contracts/FieldProofEscrow.sol",
+];
 const missing = [];
 
 for (const file of requiredFiles) {

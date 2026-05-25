@@ -13,5 +13,6 @@ yarn-debug.log*
 yarn-error.log*
 data/state.json
 /app.js
+/charts.js
 /server/*.js
 /scripts/*.js

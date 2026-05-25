@@ -297,7 +297,6 @@ const els = {
   avgConfidence: mustQuery<HTMLElement>("#avgConfidence"),
   totalPayouts: mustQuery<HTMLElement>("#totalPayouts"),
   cityDetail: mustQuery<HTMLElement>("#cityDetail"),
-  realityChart: mustQuery<SVGSVGElement>("#realityChart"),
   walletStatus: mustQuery<HTMLElement>("#walletStatus"),
 };
 
@@ -612,94 +611,26 @@ function renderIndex() {
   els.avgFee.textContent = `${feeAverage.toFixed(1)}%`;
   els.avgConfidence.textContent = `${Math.round(confidenceAverage)}%`;
   els.totalPayouts.textContent = `${payoutTotal.toFixed(2)} ${getRewardSymbol()}`;
+  publishChartState();
 }
 
-function renderTrendChart() {
-  const width = 760;
-  const height = 220;
-  const pad = { top: 22, right: 34, bottom: 34, left: 42 };
-  const series = [
-    { key: "lagos", label: "Lagos", color: "#ffc400" },
-    { key: "accra", label: "Accra", color: "#9cff4a" },
-    { key: "nairobi", label: "Nairobi", color: "#87b7ff" },
-  ];
-  const values = state.trend.flatMap((row) => series.map((item) => row[item.key]));
-  const min = Math.min(...values) - 0.3;
-  const max = Math.max(...values) + 0.3;
-  const x = (index) =>
-    pad.left + (index / (state.trend.length - 1)) * (width - pad.left - pad.right);
-  const y = (value) =>
-    height - pad.bottom - ((value - min) / (max - min)) * (height - pad.top - pad.bottom);
-  const pathFor = (key) =>
-    state.trend
-      .map(
-        (row, index) =>
-          `${index === 0 ? "M" : "L"} ${x(index).toFixed(2)} ${y(row[key]).toFixed(2)}`,
-      )
-      .join(" ");
+function publishChartState() {
+  window.dispatchEvent(
+    new CustomEvent("fieldproof:state", {
+      detail: state,
+    }),
+  );
+}
 
-  const grid = [2, 2.5, 3, 3.5, 4]
-    .map(
-      (tick) => `
-        <g>
-          <line x1="${pad.left}" y1="${y(tick)}" x2="${width - pad.right}" y2="${y(tick)}" class="chart-grid-line" />
-          <text x="${pad.left - 12}" y="${y(tick) + 4}" class="chart-axis" text-anchor="end">${tick.toFixed(1)}%</text>
-        </g>
-      `,
-    )
-    .join("");
-
-  const lines = series
-    .map(
-      (item) => `
-        <path d="${pathFor(item.key)}" fill="none" stroke="${item.color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
-        ${state.trend
-          .map(
-            (row, index) => `
-              <circle cx="${x(index)}" cy="${y(row[item.key])}" r="4" fill="${item.color}" />
-            `,
-          )
-          .join("")}
-      `,
-    )
-    .join("");
-
-  const labels = state.trend
-    .map(
-      (row, index) => `
-        <text x="${x(index)}" y="${height - 9}" class="chart-axis" text-anchor="middle">${row.day}</text>
-      `,
-    )
-    .join("");
-
-  const legend = series
-    .map(
-      (item, index) => `
-        <g transform="translate(${width - pad.right - 216 + index * 78}, 18)">
-          <rect width="10" height="10" fill="${item.color}" rx="2"></rect>
-          <text x="16" y="10" class="chart-legend">${item.label}</text>
-        </g>
-      `,
-    )
-    .join("");
-
-  els.realityChart.innerHTML = `
-    <defs>
-      <linearGradient id="chartFill" x1="0" x2="0" y1="0" y2="1">
-        <stop offset="0%" stop-color="#ffc400" stop-opacity="0.18"></stop>
-        <stop offset="100%" stop-color="#ffc400" stop-opacity="0"></stop>
-      </linearGradient>
-    </defs>
-    ${grid}
-    <path d="${pathFor("lagos")} L ${x(state.trend.length - 1)} ${height - pad.bottom} L ${pad.left} ${height - pad.bottom} Z" fill="url(#chartFill)"></path>
-    ${lines}
-    ${labels}
-    ${legend}
-  `;
+function getVisibleRequests() {
+  const symbol = getRewardSymbol();
+  return state.requests.filter((request) => request.contractRequestId || !request.asset || request.asset === symbol);
 }
 
 function renderTasks() {
-  els.taskFeed.innerHTML = state.requests
+  const requests = getVisibleRequests();
+
+  els.taskFeed.innerHTML = requests
     .map(
       (request) => `
         <article class="task-card">
@@ -732,8 +663,11 @@ function renderTasks() {
     )
     .join("");
 
-  els.submissionRequest.innerHTML = state.requests
-    .map((request) => `<option value="${request.id}">${request.city} - ${typeLabels[request.type]}</option>`)
+  els.submissionRequest.innerHTML = requests
+    .map(
+      (request) =>
+        `<option value="${request.id}">${request.city} - ${typeLabels[request.type]} ${request.contractRequestId ? `#${request.contractRequestId}` : ""}</option>`,
+    )
     .join("");
 }
 
@@ -1039,7 +973,6 @@ async function boot() {
   formatPayload();
   renderCeloContracts();
   renderIndex();
-  renderTrendChart();
   renderTasks();
   renderRecords();
 }

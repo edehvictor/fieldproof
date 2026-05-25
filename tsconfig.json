@@ -5,6 +5,7 @@
     "moduleResolution": "NodeNext",
     "lib": ["ES2022", "DOM"],
     "types": ["node"],
+    "jsx": "react-jsx",
     "strict": false,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
@@ -12,6 +13,7 @@
   },
   "include": [
     "app.ts",
+    "charts.tsx",
     "server/**/*.ts",
     "scripts/**/*.ts",
     "types/**/*.d.ts"

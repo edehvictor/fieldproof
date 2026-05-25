@@ -27,6 +27,7 @@ The current build is a Celo-focused MVP with:
 - MiniPay contributor proof flow
 - local verifier API with onchain payout execution
 - Celo proof registry view
+- Recharts-powered city map and index analytics
 - Solidity contracts for escrow and registry
 - deploy scripts for Celo Sepolia and mainnet
 
@@ -76,7 +77,11 @@ contracts/FieldProofRegistry.sol
 server/index.ts
 data/seed.json
 docs/architecture.md
+docs/demo-script.md
+docs/continuation-checklist.md
 ```
+
+For the final submission narrative and video flow, use `docs/demo-script.md`.
 
 ## Celo Integration Plan
 

@@ -41,6 +41,8 @@ interface ProofRecord {
   chain?: "celo";
   recordTx?: string;
   evidenceHash?: string;
+  contractRequestId?: string | null;
+  contractSubmissionId?: string | null;
 }
 
 interface Submission {
@@ -50,6 +52,7 @@ interface Submission {
   contractSubmissionId?: string | null;
   evidenceHash?: string;
   submissionTx?: string | null;
+  status?: "accepted" | "review" | "rejected";
 }
 
 interface TrendRow {
@@ -627,6 +630,37 @@ function getVisibleRequests() {
   return state.requests.filter((request) => request.contractRequestId || !request.asset || request.asset === symbol);
 }
 
+function getAcceptedSubmissionCount(requestId: string) {
+  return (
+    state.submissions?.filter(
+      (submission) => submission.requestId === requestId && submission.status === "accepted",
+    ).length || 0
+  );
+}
+
+function getDisplayRequestStatus(request: ProofRequest) {
+  const acceptedCount = getAcceptedSubmissionCount(request.id);
+  return acceptedCount >= Number(request.confirmations || 1) ? "verified" : request.status;
+}
+
+function getExplorerBase() {
+  const network = celoRuntimeConfig?.activeNetwork || "sepolia";
+  return (
+    celoRuntimeConfig?.deployment?.blockExplorer ||
+    celoRuntimeConfig?.[network]?.blockExplorer ||
+    "https://celo-sepolia.blockscout.com"
+  );
+}
+
+function transactionUrl(tx?: string) {
+  return tx?.startsWith("0x") ? `${getExplorerBase()}/tx/${tx}` : null;
+}
+
+function getVisibleRecords() {
+  const symbol = getRewardSymbol();
+  return state.records.filter((record) => record.contractRequestId || record.payout.includes(symbol));
+}
+
 function renderTasks() {
   const requests = getVisibleRequests();
 
@@ -651,7 +685,7 @@ function renderTasks() {
             </div>
             <div>
               <dt>Status</dt>
-              <dd>${request.status}</dd>
+              <dd>${getDisplayRequestStatus(request)}</dd>
             </div>
             <div>
               <dt>Chain</dt>
@@ -672,19 +706,50 @@ function renderTasks() {
 }
 
 function renderRecords() {
-  els.proofRecords.innerHTML = state.records
+  const records = getVisibleRecords();
+
+  if (!records.length) {
+    els.proofRecords.innerHTML = `
+      <article class="proof-record">
+        <div>
+          <h4>No verified onchain records yet</h4>
+          <span class="tx-hash">Create a request and submit proof to publish the first record.</span>
+        </div>
+      </article>
+    `;
+    return;
+  }
+
+  els.proofRecords.innerHTML = records
     .map(
-      (record) => `
+      (record) => {
+        const payoutUrl = transactionUrl(record.tx);
+        const registryUrl = transactionUrl(record.recordTx);
+
+        return `
         <article class="proof-record">
           <div>
             <h4>${record.title}</h4>
-            <span class="tx-hash">${record.id}</span>
+            <span class="tx-hash">${record.contractRequestId ? `request #${record.contractRequestId}` : record.id}</span>
           </div>
           <span class="status-pill status-verified">${record.confidence}% confidence</span>
           <p>${record.result}. Payout released: <strong>${record.payout}</strong>.</p>
-          <span class="tx-hash">${record.tx}</span>
+          <div class="record-meta">
+            ${
+              payoutUrl
+                ? `<a class="tx-link" href="${payoutUrl}" target="_blank" rel="noreferrer">Payout tx ${formatAddress(record.tx)}</a>`
+                : `<span class="tx-hash">${record.tx}</span>`
+            }
+            ${
+              registryUrl
+                ? `<a class="tx-link" href="${registryUrl}" target="_blank" rel="noreferrer">Registry tx ${formatAddress(record.recordTx)}</a>`
+                : ""
+            }
+            ${record.evidenceHash ? `<span class="tx-hash">Evidence ${formatAddress(record.evidenceHash)}</span>` : ""}
+          </div>
         </article>
-      `,
+      `;
+      },
     )
     .join("");
 }

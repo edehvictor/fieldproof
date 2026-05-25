@@ -459,6 +459,11 @@ async function handleApi(req, res, url) {
       };
       state.records.unshift(record);
       updateIndex(state, request, submission.reportedValue, verification.confidence);
+
+      const acceptedCount = state.submissions.filter(
+        (item) => item.requestId === request.id && item.status === "accepted",
+      ).length;
+      request.status = acceptedCount >= Number(request.confirmations || 1) ? "verified" : "collecting";
     }
 
     await writeState(state);

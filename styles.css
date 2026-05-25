@@ -933,6 +933,33 @@ pre {
   word-break: break-all;
 }
 
+.record-meta {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tx-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  border: 1px solid rgba(28, 102, 216, 0.36);
+  border-radius: 8px;
+  background: rgba(28, 102, 216, 0.11);
+  color: #bfd3ff;
+  padding: 0 10px;
+  font-family: "DM Mono", ui-monospace, monospace;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.tx-link:hover {
+  border-color: rgba(28, 102, 216, 0.7);
+  background: rgba(28, 102, 216, 0.2);
+}
+
 @keyframes pulse {
   70% {
     box-shadow: 0 0 0 9px rgba(156, 255, 74, 0);

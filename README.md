@@ -12,7 +12,7 @@ Punchline:
 
 Stablecoin adoption data is often too local, too offline, or too stale for AI agents and payment teams to trust. FieldProof creates a verified feed of real-world stablecoin conditions:
 
-- USDT/cUSD cash-out fees
+- USDT/USDm cash-out fees
 - MiniPay merchant acceptance
 - stablecoin-to-cash spreads
 - local price benchmarks
@@ -58,7 +58,7 @@ POST /api/reset
 
 The browser flow now signs real Celo Sepolia transactions:
 
-1. The requester approves test cUSD spend.
+1. The requester approves test USDm spend.
 2. The requester calls `FieldProofEscrow.createRequest(...)`.
 3. The contributor calls `submitProof(...)` with an evidence hash.
 4. The verifier backend calls `verifyProof(...)` and releases payout.
@@ -91,10 +91,10 @@ docs/architecture.md
 - Deployer: `0x18883C2FF5a84b7F686FF0cfd400c6F3D6068b07`
 - `FieldProofEscrow`: `0x469ddae654095bb0c086d2e3b240e06cfc360e95`
 - `FieldProofRegistry`: `0x9830b6a837ca3a603611f944e9f70563159217be`
-- Test cUSD: `0xEF4d55D6dE8e8d73232827Cd1e9b2F2dBb45bC80`
+- Test USDm: `0xdE9e4C3ce781b4bA68120d6261cbad65ce0aB00b`
 - Explorer: `https://celo-sepolia.blockscout.com`
 
-The requester wallet must hold test cUSD before funding a request. If it only has test CELO, swap test CELO to cUSD in Mento first.
+The requester wallet must hold test USDm before funding a request. Celo Sepolia also has cUSD, but Mento V3 currently exposes USDm more clearly for this test flow.
 
 ## Contract Commands
 

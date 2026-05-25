@@ -11,7 +11,7 @@
       "status": "collecting",
       "created": "8 min ago",
       "chain": "celo",
-      "asset": "cUSD",
+      "asset": "USDm",
       "escrowTx": "0x9b21b337c0e4a11df21e91c64f12d9a3fc220d1e4b6f177bc92e44b6f0a88219"
     },
     {
@@ -25,12 +25,12 @@
       "status": "collecting",
       "created": "22 min ago",
       "chain": "celo",
-      "asset": "cUSD",
+      "asset": "USDm",
       "escrowTx": "0x4f172d08b9e0ca8838b932ce6dbf824d4e54b93335e603f7ce7306df8db0a549"
     },
     {
       "id": "fp-req-1034",
-      "question": "What spread is offered for cUSD to local cash in Nairobi?",
+      "question": "What spread is offered for USDm to local cash in Nairobi?",
       "type": "fx_spread",
       "city": "Nairobi",
       "reward": 0.7,
@@ -39,7 +39,7 @@
       "status": "verified",
       "created": "41 min ago",
       "chain": "celo",
-      "asset": "cUSD",
+      "asset": "USDm",
       "escrowTx": "0xe68bcbaf8b0efdc536cec929f6c1f3e72c940d5d51f00610424e2b37987c5501"
     }
   ],
@@ -53,7 +53,7 @@
     },
     {
       "city": "Abuja",
-      "signal": "cUSD cash-out fee",
+      "signal": "USDm cash-out fee",
       "value": "3.4%",
       "confidence": 84,
       "status": "review"
@@ -79,7 +79,7 @@
       "title": "Lagos USDT cash-out fee verified",
       "result": "3.8% fee on 20 USDT, confirmed by 3 contributors",
       "confidence": 91,
-      "payout": "2.40 cUSD",
+      "payout": "2.40 USDm",
       "tx": "0x9b21b337c0e4a11df21e91c64f12d9a3fc220d1e4b6f177bc92e44b6f0a88219",
       "chain": "celo",
       "recordTx": "0x3ed570c3d68adfc6b580dbf5fe7d0eb05060f6951dff8e41607d8e9cd30787f9"
@@ -89,7 +89,7 @@
       "title": "Accra MiniPay acceptance sample",
       "result": "7 of 12 checked merchants accepted MiniPay",
       "confidence": 87,
-      "payout": "2.40 cUSD",
+      "payout": "2.40 USDm",
       "tx": "0x4f172d08b9e0ca8838b932ce6dbf824d4e54b93335e603f7ce7306df8db0a549",
       "chain": "celo",
       "recordTx": "0xf3db01e46b3c08f30eff7d04a0f4bb1b32de60733c19f7fa1632a7eaef1b5fb1"

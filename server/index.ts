@@ -22,7 +22,7 @@ const statePath = join(dataDir, "state.json");
 const seedPath = join(dataDir, "seed.json");
 const port = Number(process.env.PORT || 4173);
 const activeCeloNetwork = process.env.CELO_NETWORK === "mainnet" ? "mainnet" : "sepolia";
-const celoSepoliaCusd = "0xEF4d55D6dE8e8d73232827Cd1e9b2F2dBb45bC80";
+const celoSepoliaUsdm = "0xdE9e4C3ce781b4bA68120d6261cbad65ce0aB00b";
 
 const mimeTypes = {
   ".html": "text/html; charset=utf-8",
@@ -60,8 +60,8 @@ const celoConfig = {
     name: "Celo Sepolia",
     rpcUrl: process.env.CELO_RPC_URL || "https://forno.celo-sepolia.celo-testnet.org",
     blockExplorer: "https://celo-sepolia.blockscout.com",
-    stableToken: process.env.STABLE_TOKEN_ADDRESS || celoSepoliaCusd,
-    stableTokenSymbol: process.env.STABLE_TOKEN_SYMBOL || "cUSD",
+    stableToken: process.env.STABLE_TOKEN_ADDRESS || celoSepoliaUsdm,
+    stableTokenSymbol: process.env.STABLE_TOKEN_SYMBOL || "USDm",
     stableTokenDecimals: Number(process.env.STABLE_TOKEN_DECIMALS || 18),
   },
 };
@@ -267,8 +267,12 @@ function verifySubmission({ request, reportedValue = "", evidenceType = "", loca
     },
     {
       label: "Celo asset",
-      passed: request.asset === "cUSD" || request.asset === "USDC" || request.asset === "USDT",
-      detail: `${request.asset || "cUSD"} reward rail`,
+      passed:
+        request.asset === "USDm" ||
+        request.asset === "cUSD" ||
+        request.asset === "USDC" ||
+        request.asset === "USDT",
+      detail: `${request.asset || celoConfig.sepolia.stableTokenSymbol} reward rail`,
     },
     {
       label: "Location scope",
@@ -445,7 +449,7 @@ async function handleApi(req, res, url) {
         title: `${request.city} ${typeLabels[request.type] || request.type} verified`,
         result: `${submission.reportedValue}, accepted by FieldProof verifier`,
         confidence: verification.confidence,
-        payout: `${request.reward.toFixed(2)} cUSD`,
+        payout: `${request.reward.toFixed(2)} ${request.asset || celoConfig.sepolia.stableTokenSymbol}`,
         tx: payoutTx,
         chain: "celo",
         recordTx,

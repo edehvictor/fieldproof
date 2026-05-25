@@ -5,7 +5,7 @@ FieldProof is a stablecoin reality oracle for AI agents. The MVP is intentionall
 ## System Surfaces
 
 - Agent console: creates structured proof requests from market questions.
-- MiniPay contributor flow: lets local users submit evidence and receive cUSD rewards.
+- MiniPay contributor flow: lets local users submit evidence and receive stablecoin rewards.
 - AI verifier: currently a local deterministic verifier API, designed to be replaced by OCR/image/location checks.
 - Celo contracts: escrow stablecoin rewards and publish accepted proof records.
 - Stablecoin Reality Index: public dashboard and API-ready output for agents.
@@ -13,7 +13,7 @@ FieldProof is a stablecoin reality oracle for AI agents. The MVP is intentionall
 ## Proof Lifecycle
 
 1. An agent asks a local stablecoin question.
-2. FieldProof creates request metadata and funds the reward pool in cUSD.
+2. FieldProof creates request metadata and funds the reward pool in the configured Celo stable token.
 3. MiniPay users submit photo, receipt, location, timestamp, and typed values.
 4. The verifier API checks evidence and emits a confidence score.
 5. The escrow releases payouts to accepted contributors.
@@ -48,7 +48,7 @@ Supported Celo defaults:
 - Celo Sepolia chain id: `11142220` / `0xaa044c`
 - Celo Sepolia RPC: `https://forno.celo-sepolia.celo-testnet.org`
 - Celo Sepolia explorer: `https://celo-sepolia.blockscout.com`
-- Celo Sepolia cUSD: `0xEF4d55D6dE8e8d73232827Cd1e9b2F2dBb45bC80`
+- Celo Sepolia USDm: `0xdE9e4C3ce781b4bA68120d6261cbad65ce0aB00b`
 - Mainnet cUSD: `0x765DE816845861e75A25fCA122bb6898B8B1282a`
 
 ## Hackathon Demo

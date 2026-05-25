@@ -167,7 +167,7 @@ let state: FieldProofState = {
     },
     {
       id: "fp-req-1034",
-      question: "What spread is offered for cUSD to local cash in Nairobi?",
+      question: "What spread is offered for USDm to local cash in Nairobi?",
       type: "fx_spread",
       city: "Nairobi",
       reward: 0.7,
@@ -187,7 +187,7 @@ let state: FieldProofState = {
     },
     {
       city: "Abuja",
-      signal: "cUSD cash-out fee",
+      signal: "USDm cash-out fee",
       value: "3.4%",
       confidence: 84,
       status: "review",
@@ -213,7 +213,7 @@ let state: FieldProofState = {
       title: "Lagos USDT cash-out fee verified",
       result: "3.8% fee on 20 USDT, confirmed by 3 contributors",
       confidence: 91,
-      payout: "2.40 cUSD",
+      payout: "2.40 USDm",
       tx: "0x9b21b337c0e4a11df21e91c64f12d9a3fc220d1e4b6f177bc92e44b6f0a88219",
     },
     {
@@ -221,7 +221,7 @@ let state: FieldProofState = {
       title: "Accra MiniPay acceptance sample",
       result: "7 of 12 checked merchants accepted MiniPay",
       confidence: 87,
-      payout: "2.40 cUSD",
+      payout: "2.40 USDm",
       tx: "0x4f172d08b9e0ca8838b932ce6dbf824d4e54b93335e603f7ce7306df8db0a549",
     },
   ],
@@ -361,6 +361,11 @@ function formatAddress(address?: string) {
   return address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "Pending";
 }
 
+function getRewardSymbol() {
+  const network = celoRuntimeConfig?.activeNetwork || "sepolia";
+  return celoRuntimeConfig?.[network]?.stableTokenSymbol || "USDm";
+}
+
 function renderCeloContracts() {
   const network = celoRuntimeConfig?.activeNetwork || "sepolia";
   const networkConfig = celoRuntimeConfig?.[network];
@@ -467,7 +472,7 @@ function getOnchainContext() {
     registry,
     stableToken,
     decimals: networkConfig.stableTokenDecimals || 18,
-    symbol: networkConfig.stableTokenSymbol || "cUSD",
+    symbol: networkConfig.stableTokenSymbol || "USDm",
   };
 }
 
@@ -560,7 +565,7 @@ function formatPayload() {
     question: els.agentQuestion.value.trim(),
     proofType: els.proofType.value,
     city: els.city.value,
-    asset: "cUSD",
+    asset: getRewardSymbol(),
     rewardPerProof: Number(els.reward.value).toFixed(2),
     confirmationsNeeded: Number(els.confirmations.value),
     evidenceRequired: ["photo", "location", "timestamp", "typed_value"],
@@ -606,7 +611,7 @@ function renderIndex() {
 
   els.avgFee.textContent = `${feeAverage.toFixed(1)}%`;
   els.avgConfidence.textContent = `${Math.round(confidenceAverage)}%`;
-  els.totalPayouts.textContent = `${payoutTotal.toFixed(2)} cUSD`;
+  els.totalPayouts.textContent = `${payoutTotal.toFixed(2)} ${getRewardSymbol()}`;
 }
 
 function renderTrendChart() {
@@ -703,7 +708,7 @@ function renderTasks() {
           <dl>
             <div>
               <dt>Reward</dt>
-              <dd>${request.reward.toFixed(2)} cUSD</dd>
+              <dd>${request.reward.toFixed(2)} ${request.asset || getRewardSymbol()}</dd>
             </div>
             <div>
               <dt>City</dt>
@@ -961,7 +966,7 @@ async function submitEvidence(event) {
       title: `${request.city} ${typeLabels[request.type]} verified`,
       result: `${reportedValue}, accepted by AI verifier`,
       confidence,
-      payout: `${request.reward.toFixed(2)} cUSD`,
+      payout: `${request.reward.toFixed(2)} ${request.asset || getRewardSymbol()}`,
       tx: `0x${crypto.randomUUID().replaceAll("-", "")}${crypto.randomUUID().replaceAll("-", "").slice(0, 32)}`,
     };
     state.records.unshift(proofRecord);

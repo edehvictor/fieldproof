@@ -15,6 +15,7 @@
 - Live app URL: add after hosting.
 - Mainnet `FieldProofEscrow`: add after deployment.
 - Mainnet `FieldProofRegistry`: add after deployment.
+- Project logo: `https://raw.githubusercontent.com/edehvictor/fieldproof/main/assets/fieldproof-logo.png`
 - Demo video: add after recording.
 - Presentation: add after preparing slides.
 - Screenshots/logo assets: use `assets/`.

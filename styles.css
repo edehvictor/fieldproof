@@ -179,6 +179,29 @@ button {
   background: rgba(255, 196, 0, 0.08);
   color: var(--gold);
   font-size: 0.7rem;
+  justify-content: center;
+}
+
+.wallet-pill:hover {
+  border-color: rgba(255, 196, 0, 0.44);
+  background: rgba(255, 196, 0, 0.14);
+}
+
+.wallet-pill:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.wallet-pill.is-connected {
+  border-color: rgba(156, 255, 74, 0.28);
+  background: rgba(156, 255, 74, 0.12);
+  color: var(--green);
+}
+
+.wallet-pill.is-error {
+  border-color: rgba(255, 109, 94, 0.34);
+  background: rgba(255, 109, 94, 0.1);
+  color: var(--red);
 }
 
 .pulse {

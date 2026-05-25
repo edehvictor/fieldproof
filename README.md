@@ -79,9 +79,11 @@ data/seed.json
 docs/architecture.md
 docs/demo-script.md
 docs/continuation-checklist.md
+docs/deployment.md
 ```
 
 For the final submission narrative and video flow, use `docs/demo-script.md`.
+For deployment tradeoffs, use `docs/deployment.md`.
 
 ## Celo Integration Plan
 

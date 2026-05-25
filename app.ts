@@ -106,6 +106,9 @@ interface CeloConfig {
 
 interface EthereumProvider {
   request<T = unknown>(args: { method: string; params?: unknown[] }): Promise<T>;
+  isMiniPay?: boolean;
+  isMetaMask?: boolean;
+  on?: (event: "accountsChanged" | "chainChanged", handler: (payload: unknown) => void) => void;
 }
 
 interface CreateRequestResponse {
@@ -239,6 +242,7 @@ let state: FieldProofState = {
 };
 
 let celoRuntimeConfig: CeloConfig | null = null;
+let walletEventsBound = false;
 
 const typeLabels: Record<string, string> = {
   cashout_fee: "Cash-out fee",
@@ -300,7 +304,7 @@ const els = {
   avgConfidence: mustQuery<HTMLElement>("#avgConfidence"),
   totalPayouts: mustQuery<HTMLElement>("#totalPayouts"),
   cityDetail: mustQuery<HTMLElement>("#cityDetail"),
-  walletStatus: mustQuery<HTMLElement>("#walletStatus"),
+  walletStatus: mustQuery<HTMLButtonElement>("#walletStatus"),
 };
 
 const celoSepolia = {
@@ -353,9 +357,21 @@ async function loadCeloConfig() {
   }
 }
 
-function setWalletStatus(text: string) {
+function getWalletName(provider = window.ethereum) {
+  if (provider?.isMiniPay) {
+    return "MiniPay";
+  }
+  if (provider?.isMetaMask) {
+    return "MetaMask";
+  }
+  return provider ? "Wallet" : "MiniPay/MetaMask";
+}
+
+function setWalletStatus(text: string, tone: "ready" | "connected" | "error" = "ready") {
   if (els.walletStatus) {
     els.walletStatus.textContent = text;
+    els.walletStatus.classList.toggle("is-connected", tone === "connected");
+    els.walletStatus.classList.toggle("is-error", tone === "error");
   }
 }
 
@@ -481,13 +497,26 @@ function getOnchainContext() {
 async function ensureCeloWallet(requestAccounts = true) {
   const provider = window.ethereum;
   if (!provider) {
-    setWalletStatus("MiniPay demo mode");
+    setWalletStatus("Open MiniPay/MetaMask", "error");
     throw new Error("Open this app in MiniPay or MetaMask to sign Celo Sepolia transactions.");
   }
 
+  bindWalletEvents(provider);
+  const walletName = getWalletName(provider);
+  const accounts = await provider.request<string[]>({
+    method: requestAccounts ? "eth_requestAccounts" : "eth_accounts",
+  });
+  const account = accounts?.[0];
+
+  if (requestAccounts && !account) {
+    setWalletStatus(`Connect ${walletName}`, "error");
+    throw new Error("Wallet connection was not completed.");
+  }
+
   const chainId = await provider.request<string>({ method: "eth_chainId" });
-  if (chainId !== celoSepolia.chainId) {
+  if ((requestAccounts || account) && chainId !== celoSepolia.chainId) {
     try {
+      setWalletStatus("Switching to Celo", "ready");
       await provider.request({
         method: "wallet_switchEthereumChain",
         params: [{ chainId: celoSepolia.chainId }],
@@ -509,24 +538,64 @@ async function ensureCeloWallet(requestAccounts = true) {
     }
   }
 
-  const accounts = await provider.request<string[]>({
-    method: requestAccounts ? "eth_requestAccounts" : "eth_accounts",
-  });
-  const account = accounts?.[0];
-  setWalletStatus(account ? `Sepolia ${account.slice(0, 6)}...${account.slice(-4)}` : "Connect wallet");
-  if (requestAccounts && !account) {
-    throw new Error("Wallet connection was not completed.");
-  }
+  setWalletStatus(account ? `${walletName} ${formatAddress(account)}` : `Connect ${walletName}`, account ? "connected" : "ready");
 
   return { provider, account };
 }
 
 async function initMiniPayWallet() {
+  const provider = window.ethereum;
+  if (!provider) {
+    setWalletStatus("Open MiniPay/MetaMask", "error");
+    return;
+  }
+
   try {
-    await ensureCeloWallet(false);
+    bindWalletEvents(provider);
+    const accounts = await provider.request<string[]>({ method: "eth_accounts" });
+    const account = accounts?.[0];
+    const walletName = getWalletName(provider);
+    setWalletStatus(account ? `${walletName} ${formatAddress(account)}` : `Connect ${walletName}`, account ? "connected" : "ready");
   } catch (error) {
-    setWalletStatus(window.ethereum ? "Connect wallet" : "MiniPay demo mode");
+    setWalletStatus("Connect wallet", "error");
     console.warn("MiniPay/Celo wallet connection was not completed.", error);
+  }
+}
+
+function bindWalletEvents(provider: EthereumProvider) {
+  if (walletEventsBound || !provider.on) {
+    return;
+  }
+
+  provider.on("accountsChanged", (payload) => {
+    const accounts = Array.isArray(payload) ? payload : [];
+    const account = typeof accounts[0] === "string" ? accounts[0] : undefined;
+    const walletName = getWalletName(provider);
+    setWalletStatus(account ? `${walletName} ${formatAddress(account)}` : `Connect ${walletName}`, account ? "connected" : "ready");
+  });
+
+  provider.on("chainChanged", (payload) => {
+    if (payload === celoSepolia.chainId) {
+      setWalletStatus(`Celo ${getWalletName(provider)}`, "connected");
+    } else {
+      setWalletStatus("Switch to Celo", "ready");
+    }
+  });
+
+  walletEventsBound = true;
+}
+
+async function connectWallet() {
+  try {
+    setWalletStatus("Opening wallet", "ready");
+    const { account } = await ensureCeloWallet(true);
+    setWalletStatus(`${getWalletName()} ${formatAddress(account)}`, "connected");
+    setInlineStatus(els.requestChainStatus, "Wallet connected. Ready to fund a request.", "success");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Wallet connection failed.";
+    setWalletStatus(window.ethereum ? "Connect wallet" : "Open MiniPay/MetaMask", "error");
+    setInlineStatus(els.requestChainStatus, message, "error");
+    console.warn("Wallet connection failed.", error);
   }
 }
 
@@ -1022,6 +1091,7 @@ document
 document
   .querySelectorAll<HTMLButtonElement>("[data-city]")
   .forEach((button) => button.addEventListener("click", () => updateCityDetail(button.dataset.city)));
+els.walletStatus.addEventListener("click", connectWallet);
 window.addEventListener("fieldproof:city", (event) => {
   const city = (event as CustomEvent<string>).detail;
   if (city) {

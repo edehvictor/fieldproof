@@ -957,6 +957,12 @@ document
 document
   .querySelectorAll<HTMLButtonElement>("[data-city]")
   .forEach((button) => button.addEventListener("click", () => updateCityDetail(button.dataset.city)));
+window.addEventListener("fieldproof:city", (event) => {
+  const city = (event as CustomEvent<string>).detail;
+  if (city) {
+    updateCityDetail(city);
+  }
+});
 
 ["input", "change"].forEach((eventName) => {
   [els.agentQuestion, els.proofType, els.city, els.reward, els.confirmations].forEach((input) => {

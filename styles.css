@@ -417,86 +417,30 @@ h3 {
   inset: 26px;
   border: 1px dashed rgba(255, 196, 0, 0.18);
   border-radius: 8px;
+  pointer-events: none;
 }
 
-.route {
-  position: absolute;
-  height: 2px;
-  transform-origin: left;
-  background: linear-gradient(90deg, rgba(28, 102, 216, 0.08), rgba(28, 102, 216, 0.45));
+.city-map-shell {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 360px;
+  padding: 24px;
 }
 
-.route-a {
-  width: 42%;
-  left: 26%;
-  top: 45%;
-  transform: rotate(18deg);
+.city-map-node {
+  cursor: pointer;
+  outline: none;
 }
 
-.route-b {
-  width: 28%;
-  left: 45%;
-  top: 58%;
-  transform: rotate(-32deg);
+.city-map-node text {
+  pointer-events: none;
 }
 
-.route-c {
-  width: 34%;
-  left: 24%;
-  top: 64%;
-  transform: rotate(-14deg);
-  background: linear-gradient(90deg, rgba(255, 196, 0, 0.08), rgba(255, 196, 0, 0.55));
-}
-
-.city-node {
-  position: absolute;
-  z-index: 2;
-  display: grid;
-  gap: 4px;
-  min-width: 108px;
-  padding: 12px;
-  border: 1px solid rgba(255, 196, 0, 0.2);
-  border-radius: 8px;
-  background: #171a16;
-  color: var(--ink);
-  text-align: left;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
-}
-
-.city-node span {
-  color: var(--muted);
-  font-size: 0.82rem;
-}
-
-.city-node strong {
-  font-size: 1.25rem;
-  color: var(--gold);
-  font-family: "DM Mono", ui-monospace, monospace;
-}
-
-.city-node.is-hot {
-  border-color: rgba(255, 109, 94, 0.35);
-  background: var(--red-2);
-}
-
-.node-lagos {
-  left: 18%;
-  top: 48%;
-}
-
-.node-accra {
-  left: 40%;
-  top: 58%;
-}
-
-.node-nairobi {
-  right: 18%;
-  bottom: 20%;
-}
-
-.node-abuja {
-  left: 28%;
-  top: 20%;
+.city-map-node:focus rect,
+.city-map-node:hover rect {
+  stroke: var(--green);
+  stroke-width: 2;
 }
 
 .city-detail {
@@ -1101,25 +1045,9 @@ pre {
     min-height: 420px;
   }
 
-  .city-node {
-    min-width: 96px;
-    padding: 10px;
-  }
-
-  .node-lagos {
-    left: 8%;
-  }
-
-  .node-accra {
-    left: 28%;
-  }
-
-  .node-nairobi {
-    right: 8%;
-  }
-
-  .node-abuja {
-    left: 18%;
+  .city-map-shell {
+    height: 420px;
+    padding: 18px;
   }
 
   .proof-record {

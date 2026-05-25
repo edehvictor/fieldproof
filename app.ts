@@ -307,18 +307,6 @@ const els = {
   walletStatus: mustQuery<HTMLButtonElement>("#walletStatus"),
 };
 
-const celoSepolia = {
-  chainId: "0xaa044c",
-  chainName: "Celo Sepolia",
-  nativeCurrency: {
-    name: "CELO",
-    symbol: "CELO",
-    decimals: 18,
-  },
-  rpcUrls: ["https://forno.celo-sepolia.celo-testnet.org"],
-  blockExplorerUrls: ["https://celo-sepolia.blockscout.com"],
-};
-
 const functionSelectors = {
   approve: "0x095ea7b3",
   allowance: "0xdd62ed3e",
@@ -382,6 +370,35 @@ function formatAddress(address?: string) {
 function getRewardSymbol() {
   const network = celoRuntimeConfig?.activeNetwork || "sepolia";
   return celoRuntimeConfig?.[network]?.stableTokenSymbol || "USDm";
+}
+
+function getActiveNetwork() {
+  const network = celoRuntimeConfig?.activeNetwork || "sepolia";
+  return celoRuntimeConfig?.[network];
+}
+
+function getActiveNetworkLabel() {
+  return getActiveNetwork()?.name || "Celo";
+}
+
+function getWalletChainParams() {
+  const networkConfig = getActiveNetwork();
+
+  if (!networkConfig) {
+    throw new Error("Celo network config is missing.");
+  }
+
+  return {
+    chainId: networkConfig.chainIdHex,
+    chainName: networkConfig.name,
+    nativeCurrency: {
+      name: "CELO",
+      symbol: "CELO",
+      decimals: 18,
+    },
+    rpcUrls: [networkConfig.rpcUrl],
+    blockExplorerUrls: [networkConfig.blockExplorer],
+  };
 }
 
 function renderCeloContracts() {
@@ -479,7 +496,7 @@ function getOnchainContext() {
   const stableToken = networkConfig?.stableToken;
 
   if (!networkConfig || !deployment || !escrow || !registry || !stableToken) {
-    throw new Error("Celo Sepolia contract or stable-token config is missing.");
+    throw new Error(`${getActiveNetworkLabel()} contract or stable-token config is missing.`);
   }
 
   return {
@@ -498,10 +515,11 @@ async function ensureCeloWallet(requestAccounts = true) {
   const provider = window.ethereum;
   if (!provider) {
     setWalletStatus("Open MiniPay/MetaMask", "error");
-    throw new Error("Open this app in MiniPay or MetaMask to sign Celo Sepolia transactions.");
+    throw new Error(`Open this app in MiniPay or MetaMask to sign ${getActiveNetworkLabel()} transactions.`);
   }
 
   bindWalletEvents(provider);
+  const targetChain = getWalletChainParams();
   const walletName = getWalletName(provider);
   const accounts = await provider.request<string[]>({
     method: requestAccounts ? "eth_requestAccounts" : "eth_accounts",
@@ -514,12 +532,12 @@ async function ensureCeloWallet(requestAccounts = true) {
   }
 
   const chainId = await provider.request<string>({ method: "eth_chainId" });
-  if ((requestAccounts || account) && chainId !== celoSepolia.chainId) {
+  if ((requestAccounts || account) && chainId !== targetChain.chainId) {
     try {
-      setWalletStatus("Switching to Celo", "ready");
+      setWalletStatus(`Switching to ${targetChain.chainName}`, "ready");
       await provider.request({
         method: "wallet_switchEthereumChain",
-        params: [{ chainId: celoSepolia.chainId }],
+        params: [{ chainId: targetChain.chainId }],
       });
     } catch (switchError) {
       if (
@@ -530,7 +548,7 @@ async function ensureCeloWallet(requestAccounts = true) {
       ) {
         await provider.request({
           method: "wallet_addEthereumChain",
-          params: [celoSepolia],
+          params: [targetChain],
         });
       } else {
         throw switchError;
@@ -575,10 +593,11 @@ function bindWalletEvents(provider: EthereumProvider) {
   });
 
   provider.on("chainChanged", (payload) => {
-    if (payload === celoSepolia.chainId) {
-      setWalletStatus(`Celo ${getWalletName(provider)}`, "connected");
+    const targetChainId = getWalletChainParams().chainId;
+    if (payload === targetChainId) {
+      setWalletStatus(`${getActiveNetworkLabel()} ${getWalletName(provider)}`, "connected");
     } else {
-      setWalletStatus("Switch to Celo", "ready");
+      setWalletStatus(`Switch to ${getActiveNetworkLabel()}`, "ready");
     }
   });
 
@@ -856,7 +875,8 @@ async function createRequest(event) {
     if (submitButton) {
       submitButton.disabled = true;
     }
-    setInlineStatus(els.requestChainStatus, "Connecting Celo Sepolia wallet...", "muted");
+    const networkLabel = getActiveNetworkLabel();
+    setInlineStatus(els.requestChainStatus, `Connecting ${networkLabel} wallet...`, "muted");
     const { provider, account } = await ensureCeloWallet(true);
     const ctx = getOnchainContext();
     const rewardUnits = parseUnits(reward.toFixed(6), ctx.decimals);
@@ -866,7 +886,7 @@ async function createRequest(event) {
 
     if (balance < totalFunding) {
       throw new Error(
-        `Need ${formatUnits(totalFunding, ctx.decimals)} ${ctx.symbol} to fund this request. Current balance: ${formatUnits(balance, ctx.decimals)} ${ctx.symbol}. Swap test CELO to ${ctx.symbol} in Mento, then retry.`,
+        `Need ${formatUnits(totalFunding, ctx.decimals)} ${ctx.symbol} to fund this request. Current balance: ${formatUnits(balance, ctx.decimals)} ${ctx.symbol}. Add ${ctx.symbol} to this wallet, then retry.`,
       );
     }
 
@@ -884,7 +904,7 @@ async function createRequest(event) {
       await sendWalletTransaction(provider, account, ctx.stableToken, approveData);
     }
 
-    setInlineStatus(els.requestChainStatus, "Funding FieldProofEscrow on Celo Sepolia...", "muted");
+    setInlineStatus(els.requestChainStatus, `Funding FieldProofEscrow on ${ctx.networkConfig.name}...`, "muted");
     const metadataHash = await sha256Hex(
       JSON.stringify({
         ...payload,
@@ -919,11 +939,11 @@ async function createRequest(event) {
     state = result.state;
     setInlineStatus(
       els.requestChainStatus,
-      `Funded on Celo Sepolia: request #${result.request.contractRequestId}`,
+      `Funded on ${ctx.networkConfig.name}: request #${result.request.contractRequestId}`,
       "success",
     );
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to fund request on Celo Sepolia.";
+    const message = error instanceof Error ? error.message : "Unable to fund request on Celo.";
     setInlineStatus(els.requestChainStatus, message, "error");
     console.warn("Onchain proof request was not completed.", error);
     return;
@@ -1008,7 +1028,7 @@ async function submitEvidence(event) {
       accepted ? "success" : "muted",
     );
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unable to submit proof on Celo Sepolia.";
+    const message = error instanceof Error ? error.message : "Unable to submit proof on Celo.";
     setInlineStatus(els.submissionChainStatus, message, "error");
     console.warn("Proof submission was not completed.", error);
     return;

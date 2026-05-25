@@ -48,11 +48,11 @@ const celoConfig = {
     chainId: 42220,
     chainIdHex: "0xa4ec",
     name: "Celo Mainnet",
-    rpcUrl: "https://forno.celo.org",
+    rpcUrl: process.env.CELO_RPC_URL || "https://forno.celo.org",
     blockExplorer: "https://celoscan.io",
-    stableToken: "0x765DE816845861e75A25fCA122bb6898B8B1282a",
-    stableTokenSymbol: "cUSD",
-    stableTokenDecimals: 18,
+    stableToken: process.env.STABLE_TOKEN_ADDRESS || "0x765DE816845861e75A25fCA122bb6898B8B1282a",
+    stableTokenSymbol: process.env.STABLE_TOKEN_SYMBOL || "cUSD",
+    stableTokenDecimals: Number(process.env.STABLE_TOKEN_DECIMALS || 18),
   },
   sepolia: {
     chainId: 11142220,
@@ -272,7 +272,7 @@ function verifySubmission({ request, reportedValue = "", evidenceType = "", loca
         request.asset === "cUSD" ||
         request.asset === "USDC" ||
         request.asset === "USDT",
-      detail: `${request.asset || celoConfig.sepolia.stableTokenSymbol} reward rail`,
+      detail: `${request.asset || celoConfig[activeCeloNetwork].stableTokenSymbol} reward rail`,
     },
     {
       label: "Location scope",
@@ -379,7 +379,7 @@ async function handleApi(req, res, url) {
       status: "collecting",
       created: "now",
       chain: "celo",
-      asset: body.asset || celoConfig.sepolia.stableTokenSymbol,
+      asset: body.asset || celoConfig[activeCeloNetwork].stableTokenSymbol,
       requester: body.requester || null,
       contractRequestId,
       metadataHash: body.metadataHash || null,
@@ -449,7 +449,7 @@ async function handleApi(req, res, url) {
         title: `${request.city} ${typeLabels[request.type] || request.type} verified`,
         result: `${submission.reportedValue}, accepted by FieldProof verifier`,
         confidence: verification.confidence,
-        payout: `${request.reward.toFixed(2)} ${request.asset || celoConfig.sepolia.stableTokenSymbol}`,
+        payout: `${request.reward.toFixed(2)} ${request.asset || celoConfig[activeCeloNetwork].stableTokenSymbol}`,
         tx: payoutTx,
         chain: "celo",
         recordTx,

@@ -80,10 +80,12 @@ docs/architecture.md
 docs/demo-script.md
 docs/continuation-checklist.md
 docs/deployment.md
+docs/proof-of-ship-submission.md
 ```
 
 For the final submission narrative and video flow, use `docs/demo-script.md`.
 For deployment tradeoffs, use `docs/deployment.md`.
+For Talent project copy and checklist, use `docs/proof-of-ship-submission.md`.
 
 ## Celo Integration Plan
 
